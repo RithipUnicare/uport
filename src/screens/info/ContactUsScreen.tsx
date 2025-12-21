@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Appbar, List, Text, useTheme } from 'react-native-paper';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/AppNavigator';
@@ -11,7 +12,7 @@ const ContactUsScreen: React.FC<Props> = ({ navigation }) => {
   const theme = useTheme();
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <Appbar.Header style={{ backgroundColor: theme.colors.primary }}>
         <Appbar.BackAction onPress={() => navigation.goBack()} />
         <Appbar.Content title="Contact Us" />
@@ -39,7 +40,7 @@ const ContactUsScreen: React.FC<Props> = ({ navigation }) => {
           left={props => <List.Icon {...props} icon="map-marker" />}
         />
       </View>
-    </View>
+    </SafeAreaView>
   );
 };
 

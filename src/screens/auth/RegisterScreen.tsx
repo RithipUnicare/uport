@@ -7,6 +7,7 @@ import {
   Platform,
   TouchableOpacity,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   Button,
   TextInput,
@@ -151,140 +152,145 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
   };
 
   return (
-    <KeyboardAvoidingView
+    <SafeAreaView
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      edges={['top', 'left', 'right', 'bottom']}
     >
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.header}>
-          <Text style={styles.title}>
-            {step === 'register' ? 'Register' : 'Verify OTP'}
-          </Text>
-          <TouchableOpacity
-            style={styles.closeButton}
-            onPress={() => navigation.goBack()}
-          >
-            <Text style={styles.closeText}>✕</Text>
-          </TouchableOpacity>
-          <View style={styles.logoContainer}>
-            <View
-              style={[styles.logo, { backgroundColor: theme.colors.primary }]}
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <ScrollView contentContainerStyle={styles.scrollContent}>
+          <View style={styles.header}>
+            <Text style={styles.title}>
+              {step === 'register' ? 'Register' : 'Verify OTP'}
+            </Text>
+            <TouchableOpacity
+              style={styles.closeButton}
+              onPress={() => navigation.goBack()}
             >
-              <Text style={styles.logoText}>UPORT</Text>
-            </View>
-          </View>
-          <Text style={styles.subtitle}>
-            Your number and other details are safe with us
-          </Text>
-        </View>
-
-        {step === 'register' ? (
-          <View style={styles.formContainer}>
-            <TextInput
-              label="Name"
-              value={name}
-              onChangeText={setName}
-              mode="outlined"
-              style={styles.input}
-            />
-
-            <TextInput
-              label="Mobile Number"
-              value={mobile}
-              onChangeText={setMobile}
-              keyboardType="phone-pad"
-              maxLength={10}
-              mode="outlined"
-              style={styles.input}
-            />
-
-            <TextInput
-              label="Create Password"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry={!showPassword}
-              mode="outlined"
-              style={styles.input}
-              right={
-                <TextInput.Icon
-                  icon={showPassword ? 'eye-off' : 'eye'}
-                  onPress={() => setShowPassword(!showPassword)}
-                />
-              }
-            />
-
-            <TextInput
-              label="Company Name"
-              value={companyName}
-              onChangeText={setCompanyName}
-              mode="outlined"
-              style={styles.input}
-            />
-
-            <View style={styles.pickerContainer}>
-              <Text style={styles.pickerLabel}>Select Your Area</Text>
-              <Picker
-                selectedValue={area}
-                onValueChange={setArea}
-                style={styles.picker}
+              <Text style={styles.closeText}>✕</Text>
+            </TouchableOpacity>
+            {/* <View style={styles.logoContainer}>
+              <View
+                style={[styles.logo, { backgroundColor: theme.colors.primary }]}
               >
-                <Picker.Item label="Select Your area" value="" />
-                {areas.map((item: any) => (
-                  <Picker.Item
-                    key={item.id}
-                    label={item.name}
-                    value={item.id.toString()}
+                <Text style={styles.logoText}>UPORT</Text>
+              </View>
+            </View> */}
+            <Text style={styles.subtitle}>
+              Your number and other details are safe with us
+            </Text>
+          </View>
+
+          {step === 'register' ? (
+            <View style={styles.formContainer}>
+              <TextInput
+                label="Name"
+                value={name}
+                onChangeText={setName}
+                mode="outlined"
+                style={styles.input}
+              />
+
+              <TextInput
+                label="Mobile Number"
+                value={mobile}
+                onChangeText={setMobile}
+                keyboardType="phone-pad"
+                maxLength={10}
+                mode="outlined"
+                style={styles.input}
+              />
+
+              <TextInput
+                label="Create Password"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={!showPassword}
+                mode="outlined"
+                style={styles.input}
+                right={
+                  <TextInput.Icon
+                    icon={showPassword ? 'eye-off' : 'eye'}
+                    onPress={() => setShowPassword(!showPassword)}
                   />
-                ))}
-              </Picker>
+                }
+              />
+
+              <TextInput
+                label="Company Name"
+                value={companyName}
+                onChangeText={setCompanyName}
+                mode="outlined"
+                style={styles.input}
+              />
+
+              <View style={styles.pickerContainer}>
+                <Text style={styles.pickerLabel}>Select Your Area</Text>
+                <Picker
+                  selectedValue={area}
+                  onValueChange={setArea}
+                  style={styles.picker}
+                >
+                  <Picker.Item label="Select Your area" value="" />
+                  {areas.map((item: any) => (
+                    <Picker.Item
+                      key={item.id}
+                      label={item.name}
+                      value={item.id.toString()}
+                    />
+                  ))}
+                </Picker>
+              </View>
+
+              <TextInput
+                label="Address"
+                value={address}
+                onChangeText={setAddress}
+                mode="outlined"
+                multiline
+                numberOfLines={3}
+                style={styles.input}
+              />
+
+              <Button
+                mode="contained"
+                onPress={handleRegister}
+                loading={loading}
+                disabled={loading}
+                style={styles.button}
+                contentStyle={styles.buttonContent}
+              >
+                Sign up
+              </Button>
             </View>
+          ) : (
+            <View style={styles.formContainer}>
+              <TextInput
+                label="Enter OTP"
+                value={otp}
+                onChangeText={setOtp}
+                keyboardType="number-pad"
+                mode="outlined"
+                style={styles.input}
+              />
 
-            <TextInput
-              label="Address"
-              value={address}
-              onChangeText={setAddress}
-              mode="outlined"
-              multiline
-              numberOfLines={3}
-              style={styles.input}
-            />
-
-            <Button
-              mode="contained"
-              onPress={handleRegister}
-              loading={loading}
-              disabled={loading}
-              style={styles.button}
-              contentStyle={styles.buttonContent}
-            >
-              Sign up
-            </Button>
-          </View>
-        ) : (
-          <View style={styles.formContainer}>
-            <TextInput
-              label="Enter OTP"
-              value={otp}
-              onChangeText={setOtp}
-              keyboardType="number-pad"
-              mode="outlined"
-              style={styles.input}
-            />
-
-            <Button
-              mode="contained"
-              onPress={handleVerifyOtp}
-              loading={loading}
-              disabled={loading}
-              style={styles.button}
-              contentStyle={styles.buttonContent}
-            >
-              Submit
-            </Button>
-          </View>
-        )}
-      </ScrollView>
-    </KeyboardAvoidingView>
+              <Button
+                mode="contained"
+                onPress={handleVerifyOtp}
+                loading={loading}
+                disabled={loading}
+                style={styles.button}
+                contentStyle={styles.buttonContent}
+              >
+                Submit
+              </Button>
+            </View>
+          )}
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 };
 
@@ -292,6 +298,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
+  },
+  flex: {
+    flex: 1,
   },
   scrollContent: {
     flexGrow: 1,

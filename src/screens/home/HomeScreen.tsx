@@ -8,6 +8,7 @@ import {
   Image,
   Dimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   Appbar,
   Searchbar,
@@ -141,7 +142,7 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <Appbar.Header style={{ backgroundColor: theme.colors.primary }}>
         <Appbar.Content title="Uport - B2B" />
         <TouchableOpacity onPress={() => navigation.navigate('Cart')}>
@@ -295,7 +296,7 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
           <Appbar.Action icon="phone" color="#666" />
         </TouchableOpacity>
       </View>
-    </View>
+    </SafeAreaView>
   );
 };
 

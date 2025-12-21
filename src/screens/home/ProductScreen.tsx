@@ -6,6 +6,7 @@ import {
   Image,
   TouchableOpacity,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   Appbar,
   Card,
@@ -120,7 +121,7 @@ const ProductScreen: React.FC<Props> = ({ navigation, route }) => {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <Appbar.Header style={{ backgroundColor: theme.colors.primary }}>
         <Appbar.BackAction onPress={() => navigation.goBack()} />
         <Appbar.Content title="Product" />
@@ -256,7 +257,7 @@ const ProductScreen: React.FC<Props> = ({ navigation, route }) => {
           )}
         </ScrollView>
       )}
-    </View>
+    </SafeAreaView>
   );
 };
 

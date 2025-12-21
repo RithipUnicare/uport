@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   Appbar,
   Card,
@@ -105,7 +106,7 @@ const CartScreen: React.FC<Props> = ({ navigation }) => {
   );
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <Appbar.Header style={{ backgroundColor: theme.colors.primary }}>
         <Appbar.BackAction onPress={() => navigation.goBack()} />
         <Appbar.Content title="My Cart" />
@@ -216,7 +217,7 @@ const CartScreen: React.FC<Props> = ({ navigation }) => {
           </View>
         </>
       )}
-    </View>
+    </SafeAreaView>
   );
 };
 

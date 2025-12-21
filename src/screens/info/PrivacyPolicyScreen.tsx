@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, StyleSheet, ScrollView } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Appbar, Text, useTheme } from 'react-native-paper';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/AppNavigator';
@@ -10,7 +11,7 @@ const PrivacyPolicyScreen: React.FC<Props> = ({ navigation }) => {
   const theme = useTheme();
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <Appbar.Header style={{ backgroundColor: theme.colors.primary }}>
         <Appbar.BackAction onPress={() => navigation.goBack()} />
         <Appbar.Content title="Privacy Policy" />
@@ -49,7 +50,7 @@ const PrivacyPolicyScreen: React.FC<Props> = ({ navigation }) => {
           support@uport.in
         </Text>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 };
 

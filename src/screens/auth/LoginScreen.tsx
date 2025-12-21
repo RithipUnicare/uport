@@ -8,6 +8,7 @@ import {
   ScrollView,
   TouchableOpacity,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   Button,
   TextInput,
@@ -86,89 +87,98 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
   };
 
   return (
-    <KeyboardAvoidingView
+    <SafeAreaView
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      edges={['top', 'left', 'right', 'bottom']}
     >
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.header}>
-          <View style={styles.logoContainer}>
-            <View
-              style={[
-                styles.logoPlaceholder,
-                { backgroundColor: theme.colors.primary },
-              ]}
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <ScrollView contentContainerStyle={styles.scrollContent}>
+          <View style={styles.header}>
+            <View style={styles.logoContainer}>
+              <View
+                style={[
+                  //styles.logoPlaceholder,
+                  { backgroundColor: theme.colors.primary },
+                ]}
+              >
+                <Text style={styles.logoText}>UPORT</Text>
+              </View>
+            </View>
+            <Text style={styles.subtitle}>B2B Grocery Shopping</Text>
+            <Text style={styles.welcomeText}>
+              Your number and other details are safe with us
+            </Text>
+          </View>
+
+          <View style={styles.formContainer}>
+            <TextInput
+              label="Mobile Number"
+              value={mobile}
+              onChangeText={setMobile}
+              keyboardType="phone-pad"
+              maxLength={10}
+              mode="outlined"
+              style={styles.input}
+              left={<TextInput.Icon icon="phone" />}
+            />
+
+            <TextInput
+              label="Password"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry={!showPassword}
+              mode="outlined"
+              style={styles.input}
+              left={<TextInput.Icon icon="lock" />}
+              right={
+                <TextInput.Icon
+                  icon={showPassword ? 'eye-off' : 'eye'}
+                  onPress={() => setShowPassword(!showPassword)}
+                />
+              }
+            />
+
+            <Button
+              mode="contained"
+              onPress={handleLogin}
+              loading={loading}
+              disabled={loading}
+              style={styles.loginButton}
+              contentStyle={styles.buttonContent}
             >
-              <Text style={styles.logoText}>UPORT</Text>
+              Login
+            </Button>
+
+            <View style={styles.linksContainer}>
+              <TouchableOpacity onPress={() => navigation.navigate('Register')}>
+                <Text
+                  style={[styles.linkText, { color: theme.colors.primary }]}
+                >
+                  New user? Sign up
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity>
+                <Text
+                  style={[styles.linkText, { color: theme.colors.primary }]}
+                >
+                  Forgot Password?
+                </Text>
+              </TouchableOpacity>
             </View>
           </View>
-          <Text style={styles.subtitle}>B2B Grocery Shopping</Text>
-          <Text style={styles.welcomeText}>
-            Your number and other details are safe with us
-          </Text>
-        </View>
 
-        <View style={styles.formContainer}>
-          <TextInput
-            label="Mobile Number"
-            value={mobile}
-            onChangeText={setMobile}
-            keyboardType="phone-pad"
-            maxLength={10}
-            mode="outlined"
-            style={styles.input}
-            left={<TextInput.Icon icon="phone" />}
-          />
-
-          <TextInput
-            label="Password"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry={!showPassword}
-            mode="outlined"
-            style={styles.input}
-            left={<TextInput.Icon icon="lock" />}
-            right={
-              <TextInput.Icon
-                icon={showPassword ? 'eye-off' : 'eye'}
-                onPress={() => setShowPassword(!showPassword)}
-              />
-            }
-          />
-
-          <Button
-            mode="contained"
-            onPress={handleLogin}
-            loading={loading}
-            disabled={loading}
-            style={styles.loginButton}
-            contentStyle={styles.buttonContent}
-          >
-            Login
-          </Button>
-
-          <View style={styles.linksContainer}>
-            <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-              <Text style={[styles.linkText, { color: theme.colors.primary }]}>
-                New user? Sign up
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity>
-              <Text style={[styles.linkText, { color: theme.colors.primary }]}>
-                Forgot Password?
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {loading && (
-          <View style={styles.loader}>
-            <ActivityIndicator size="large" color={theme.colors.primary} />
-          </View>
-        )}
-      </ScrollView>
-    </KeyboardAvoidingView>
+          {loading && (
+            <View style={styles.loader}>
+              <ActivityIndicator size="large" color={theme.colors.primary} />
+            </View>
+          )}
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 };
 
@@ -176,6 +186,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
+  },
+  flex: {
+    flex: 1,
   },
   scrollContent: {
     flexGrow: 1,

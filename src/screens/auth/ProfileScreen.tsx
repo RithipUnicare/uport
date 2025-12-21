@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, ScrollView } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   Appbar,
   List,
@@ -36,7 +37,7 @@ const ProfileScreen: React.FC<Props> = ({ navigation }) => {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <Appbar.Header style={{ backgroundColor: theme.colors.primary }}>
         <Appbar.BackAction onPress={() => navigation.goBack()} />
         <Appbar.Content title="My Account" />
@@ -111,7 +112,7 @@ const ProfileScreen: React.FC<Props> = ({ navigation }) => {
           </Button>
         </View>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 };
 
