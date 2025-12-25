@@ -15,6 +15,7 @@ import CartService from '../../services/cart.service';
 import OrderService from '../../services/order.service';
 import { StorageService } from '../../utils/storage';
 import Toast from 'react-native-toast-message';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Cart'>;
 
@@ -38,7 +39,9 @@ const CartScreen: React.FC<Props> = ({ navigation }) => {
   const [userId, setUserId] = useState<number | null>(null);
 
   React.useEffect(() => {
-    loadCart();
+    navigation.addListener('focus', () => {
+      loadCart();
+    });
   }, []);
 
   const loadCart = async () => {
@@ -54,6 +57,12 @@ const CartScreen: React.FC<Props> = ({ navigation }) => {
         CartService.getDeliveryCharge(uid),
         OrderService.getMinimumOrder(),
       ]);
+
+      // Handle empty cart (status: 0)
+      if (cartRes.status === 0 || cartRes.message === 'Your cart is empty') {
+        setCartItems([]);
+        return;
+      }
 
       if (cartRes.status === 1 && cartRes.result) {
         setCartItems(cartRes.result);
@@ -90,9 +99,16 @@ const CartScreen: React.FC<Props> = ({ navigation }) => {
     }
   };
 
-  const removeItem = async (itemId: number) => {
+  const removeItem = async (productId: number, currentQuantity: number) => {
+    if (!userId) return;
+
     try {
-      await CartService.removeFromCart(itemId);
+      // Reduce quantity to 0 by calling API with negative quantity
+      await CartService.addToCart({
+        user_id: userId,
+        product_id: productId,
+        quantity: 0, // Remove all quantity at once
+      });
       await loadCart();
       Toast.show({
         type: 'success',
@@ -206,8 +222,15 @@ const CartScreen: React.FC<Props> = ({ navigation }) => {
                     <Text variant="titleMedium" style={styles.itemName}>
                       {item.product_name}
                     </Text>
-                    <TouchableOpacity onPress={() => removeItem(item.id)}>
-                      <Text style={styles.removeButton}>🗑️</Text>
+                    <TouchableOpacity
+                      onPress={() => removeItem(item.product_id, 0)}
+                      style={styles.deleteButton}
+                    >
+                      <MaterialCommunityIcons
+                        name="delete"
+                        size={24}
+                        color="#f44336"
+                      />
                     </TouchableOpacity>
                   </View>
 
@@ -223,14 +246,24 @@ const CartScreen: React.FC<Props> = ({ navigation }) => {
                     <View style={styles.quantityContainer}>
                       <TouchableOpacity
                         style={styles.quantityButton}
-                        onPress={() => updateQuantity(item.product_id, -1)}
+                        onPress={() =>
+                          updateQuantity(
+                            item.product_id,
+                            Number(item.quantity) - 1,
+                          )
+                        }
                       >
                         <Text style={styles.quantityButtonText}>-</Text>
                       </TouchableOpacity>
                       <Text style={styles.quantity}>{item.quantity}</Text>
                       <TouchableOpacity
                         style={styles.quantityButton}
-                        onPress={() => updateQuantity(item.product_id, 1)}
+                        onPress={() =>
+                          updateQuantity(
+                            item.product_id,
+                            Number(item.quantity) + 1,
+                          )
+                        }
                       >
                         <Text style={styles.quantityButtonText}>+</Text>
                       </TouchableOpacity>
@@ -320,7 +353,10 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   removeButton: {
-    fontSize: 20,
+    fontSize: 24,
+  },
+  deleteButton: {
+    padding: 4,
   },
   itemDetails: {
     flexDirection: 'row',
