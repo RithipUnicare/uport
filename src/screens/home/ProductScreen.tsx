@@ -21,6 +21,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/AppNavigator';
 import ProductService from '../../services/product.service';
 import CartService from '../../services/cart.service';
+import ApiService from '../../services/api';
 import { StorageService } from '../../utils/storage';
 import Toast from 'react-native-toast-message';
 
@@ -111,9 +112,15 @@ const ProductScreen: React.FC<Props> = ({ navigation, route }) => {
     }
   };
 
-  const updateQuantity = async (productId: number, quantity: number) => {
+  const updateQuantity = async (productId: number, increment: number) => {
+    if (!userId) return;
+
     try {
-      await CartService.updateCart({ id: productId, quantity });
+      await CartService.addToCart({
+        user_id: userId,
+        product_id: productId,
+        quantity: increment, // +1 to add, -1 to subtract
+      });
       await loadProducts();
     } catch (error) {
       console.error('Error updating quantity:', error);
@@ -121,13 +128,16 @@ const ProductScreen: React.FC<Props> = ({ navigation, route }) => {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+    <SafeAreaView
+      style={styles.container}
+      edges={['top', 'left', 'right', 'bottom']}
+    >
       <Appbar.Header style={{ backgroundColor: theme.colors.primary }}>
-        <Appbar.BackAction onPress={() => navigation.goBack()} />
-        <Appbar.Content title="Product" />
+        <Appbar.BackAction onPress={() => navigation.goBack()} color="#fff" />
+        <Appbar.Content title="Product" color="#fff" />
         <TouchableOpacity onPress={() => navigation.navigate('Cart')}>
           <View style={styles.cartButton}>
-            <Appbar.Action icon="shopping-cart" color="#fff" />
+            <Appbar.Action icon="cart" color="#fff" />
             {cartCount > 0 && <Badge style={styles.badge}>{cartCount}</Badge>}
           </View>
         </TouchableOpacity>
@@ -144,13 +154,17 @@ const ProductScreen: React.FC<Props> = ({ navigation, route }) => {
             const selectedVariant = product.list_product[selectedVariantIndex];
 
             return (
-              <Card key={product.id} style={styles.productCard}>
+              <Card key={productIndex} style={styles.productCard}>
                 <Card.Content>
                   <Image
                     source={{
-                      uri: `https://uports.in/admin${product.pro_image}`,
+                      uri: ApiService.getImageUrl(product.pro_image),
                     }}
                     style={styles.productImage}
+                    onError={e =>
+                      console.log('IMAGE ERROR:', e.nativeEvent.error)
+                    }
+                    onLoad={() => console.log('IMAGE LOADED')}
                   />
 
                   <Text variant="titleMedium" style={styles.productName}>
@@ -208,10 +222,7 @@ const ProductScreen: React.FC<Props> = ({ navigation, route }) => {
                             <TouchableOpacity
                               style={styles.quantityButton}
                               onPress={() =>
-                                updateQuantity(
-                                  selectedVariant.id,
-                                  selectedVariant.quantity - 1,
-                                )
+                                updateQuantity(selectedVariant.id, -1)
                               }
                             >
                               <Text style={styles.quantityButtonText}>-</Text>
@@ -222,10 +233,7 @@ const ProductScreen: React.FC<Props> = ({ navigation, route }) => {
                             <TouchableOpacity
                               style={styles.quantityButton}
                               onPress={() =>
-                                updateQuantity(
-                                  selectedVariant.id,
-                                  selectedVariant.quantity + 1,
-                                )
+                                updateQuantity(selectedVariant.id, 1)
                               }
                             >
                               <Text style={styles.quantityButtonText}>+</Text>

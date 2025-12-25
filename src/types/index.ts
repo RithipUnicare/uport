@@ -62,21 +62,33 @@ export interface CartItem {
 
 // Order types
 export interface Order {
-  id: number;
-  order_number: string;
-  total_amount: number;
-  delivery_charge: number;
-  status: string;
-  created_at: string;
-  items: OrderItem[];
+  order_id: string;
+  order_no: string;
+  total_amount: string;
+  payment_type: string;
+  order_status: string;
+  payment_status: string;
+  created_on: string;
+  modified_on: string;
+  delivery_charge: string;
+  order_details: OrderItem[];
 }
 
 export interface OrderItem {
-  id: number;
+  product_id: string;
   product_name: string;
-  product_image: string;
-  quantity: number;
-  price: number;
+  regular_price: string;
+  product_amount: string;
+  discount_amount: string;
+  quantity: string;
+  sale_tot_amount: string;
+  discount_tot_amount: string;
+}
+
+// Order API Response
+export interface OrderResponse {
+  status: number;
+  order: Order[];
 }
 
 // API Response types
@@ -93,9 +105,17 @@ export interface BannerResponse {
   image_url: string;
 }
 
+// GetCategoryBB returns an object with categories array
 export interface CategoryResponse {
   status: number;
   categories: Category[];
+  image_url?: string;
+}
+
+// GetSubCategoryBB returns an object with subcategories
+export interface SubCategoryResponse {
+  status: number;
+  subcategories: SubCategory[];
   image_url: string;
 }
 
@@ -103,4 +123,29 @@ export interface ProductResponse {
   status: number;
   products: Product[];
   image_url: string;
+}
+
+// Order-related request/response types
+export interface PlaceOrderRequest {
+  order: {
+    user_id: number;
+    medicine: Array<{
+      product_id: number;
+      quantity: number;
+    }>;
+  };
+}
+
+export interface OrderDetailsRequest {
+  order: {
+    order_id: number;
+    user_id: number;
+    user_type: number;
+  };
+}
+
+export interface MinimumOrderResponse {
+  status: number;
+  minimum_order: number;
+  message?: string;
 }

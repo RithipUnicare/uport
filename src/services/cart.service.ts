@@ -8,11 +8,6 @@ interface AddToCartRequest {
   quantity: number;
 }
 
-interface UpdateCartRequest {
-  id: number;
-  quantity: number;
-}
-
 class CartService {
   // Get cart details
   async getCartDetails(userId: number): Promise<APIResponse<CartItem[]>> {
@@ -33,14 +28,11 @@ class CartService {
     return response;
   }
 
-  // Add item to cart
+  // Add item to cart (also handles quantity increase/decrease)
   async addToCart(data: AddToCartRequest): Promise<APIResponse> {
-    return await ApiService.post<APIResponse>('/api/v1/AddToCart', data);
-  }
-
-  // Update cart item quantity
-  async updateCart(data: UpdateCartRequest): Promise<APIResponse> {
-    return await ApiService.post<APIResponse>('/api/v1/UpdateCart', data);
+    return await ApiService.post<APIResponse>('/api/v1/add_to_cart', {
+      cart: data,
+    });
   }
 
   // Remove item from cart

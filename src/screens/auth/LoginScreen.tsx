@@ -161,13 +161,13 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
                 </Text>
               </TouchableOpacity>
 
-              <TouchableOpacity>
+              {/* <TouchableOpacity>
                 <Text
                   style={[styles.linkText, { color: theme.colors.primary }]}
                 >
                   Forgot Password?
                 </Text>
-              </TouchableOpacity>
+              </TouchableOpacity> */}
             </View>
           </View>
 

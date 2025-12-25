@@ -12,10 +12,13 @@ const SettingsScreen: React.FC<Props> = ({ navigation }) => {
   const [notificationsEnabled, setNotificationsEnabled] = React.useState(true);
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+    <SafeAreaView
+      style={styles.container}
+      edges={['top', 'left', 'right', 'bottom']}
+    >
       <Appbar.Header style={{ backgroundColor: theme.colors.primary }}>
-        <Appbar.BackAction onPress={() => navigation.goBack()} />
-        <Appbar.Content title="Settings" />
+        <Appbar.BackAction onPress={() => navigation.goBack()} color="#fff" />
+        <Appbar.Content title="Settings" color="#fff" />
       </Appbar.Header>
 
       <List.Section>

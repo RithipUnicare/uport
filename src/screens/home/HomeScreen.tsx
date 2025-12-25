@@ -23,6 +23,7 @@ import { RootStackParamList } from '../../navigation/AppNavigator';
 import ProductService from '../../services/product.service';
 import CartService from '../../services/cart.service';
 import AuthService from '../../services/auth.service';
+import ApiService from '../../services/api';
 import { StorageService } from '../../utils/storage';
 import CameraService from '../../services/camera.service';
 import Toast from 'react-native-toast-message';
@@ -75,15 +76,22 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
         ProductService.getBanners(parseInt(userType)),
         ProductService.getCategories(),
       ]);
-
       if (bannersRes.status === 1 && bannersRes.sliders) {
         setBanners(
           bannersRes.sliders.map(s => bannersRes.image_url + s.slider),
         );
       }
 
-      if (categoriesRes.status === 1 && categoriesRes.categories) {
-        setCategories(categoriesRes.categories);
+      // GetCategoryBB returns a plain array
+      if (
+        Array.isArray(categoriesRes.categories) &&
+        categoriesRes.categories.length > 0
+      ) {
+        const categoriesWithImages = categoriesRes.categories.map(cat => ({
+          ...cat,
+          image: cat.image,
+        }));
+        setCategories(categoriesWithImages);
       }
     } catch (error) {
       console.error('Error loading home data:', error);
@@ -142,18 +150,21 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+    <SafeAreaView
+      style={styles.container}
+      edges={['top', 'left', 'right', 'bottom']}
+    >
       <Appbar.Header style={{ backgroundColor: theme.colors.primary }}>
-        <Appbar.Content title="Uport - B2B" />
+        <Appbar.Content title="Uport - B2B" color="#fff" />
         <TouchableOpacity onPress={() => navigation.navigate('Cart')}>
           <View style={styles.cartButton}>
-            <Appbar.Action icon="shopping-cart" color="#fff" />
+            <Appbar.Action icon="cart" color="#fff" />
             {cartCount > 0 && <Badge style={styles.badge}>{cartCount}</Badge>}
           </View>
         </TouchableOpacity>
       </Appbar.Header>
 
-      <View
+      {/* <View
         style={[
           styles.welcomeBanner,
           { backgroundColor: theme.colors.primary },
@@ -162,7 +173,7 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
         <Text style={styles.welcomeText}>
           Welcome to B2B{userName ? ` - ${userName}` : ''}
         </Text>
-      </View>
+      </View> */}
 
       <ScrollView
         refreshControl={
@@ -183,7 +194,7 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
             <Image
               source={{ uri: banners[currentBannerIndex] }}
               style={styles.bannerImage}
-              resizeMode="cover"
+              resizeMode="center"
             />
             <View style={styles.indicators}>
               {banners.map((_, index) => (
@@ -219,10 +230,28 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
                 })
               }
             >
-              <Image
-                source={{ uri: `https://uports.in/admin${category.image}` }}
-                style={styles.categoryImage}
-              />
+              {category.image && ApiService.getImageUrl(category.image) ? (
+                <Image
+                  source={{
+                    uri: ApiService.getImageUrl(category.image),
+                  }}
+                  style={styles.categoryImage}
+                  resizeMode="cover"
+                />
+              ) : (
+                <View
+                  style={[
+                    styles.categoryImage,
+                    {
+                      backgroundColor: '#e0e0e0',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                    },
+                  ]}
+                >
+                  <Text style={{ color: '#999', fontSize: 12 }}>No Image</Text>
+                </View>
+              )}
               <Text style={styles.categoryName}>{category.name}</Text>
             </TouchableOpacity>
           ))}

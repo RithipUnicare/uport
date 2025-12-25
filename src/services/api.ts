@@ -1,7 +1,7 @@
 import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
 import { StorageService, STORAGE_KEYS } from '../utils/storage';
 
-const BASE_URL = 'https://uports.in/admin';
+const BASE_URL = 'http://routegadi.com/admin/';
 
 class ApiService {
   private api: AxiosInstance;
@@ -71,9 +71,21 @@ class ApiService {
   }
 
   // Convenience method to build image URLs
-  getImageUrl(imagePath: string, baseImageUrl: string): string {
+  getImageUrl(
+    imagePath: string,
+    baseImageUrl: string = '/dashboard/image/',
+  ): string {
     if (!imagePath) return '';
+    // If imagePath already contains http/https, return as is
+    if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+      return imagePath;
+    }
     return `${BASE_URL}${baseImageUrl}${imagePath}`;
+  }
+
+  // Get the base URL
+  getBaseUrl(): string {
+    return BASE_URL;
   }
 }
 

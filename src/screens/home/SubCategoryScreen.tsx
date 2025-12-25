@@ -44,8 +44,13 @@ const SubCategoryScreen: React.FC<Props> = ({ navigation, route }) => {
   const loadSubcategories = async () => {
     try {
       const response = await ProductService.getSubCategories(categoryId);
-      if (response.status === 1 && response.result?.subcategories) {
-        setSubcategories(response.result.subcategories);
+      if (response.status === 1 && response.subcategories) {
+        // Construct full image URLs using the image_url base path
+        const subcategoriesWithImages = response.subcategories.map(subcat => ({
+          ...subcat,
+          image: response.image_url + subcat.image,
+        }));
+        setSubcategories(subcategoriesWithImages);
       }
     } catch (error) {
       console.error('Error loading subcategories:', error);
@@ -55,13 +60,16 @@ const SubCategoryScreen: React.FC<Props> = ({ navigation, route }) => {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+    <SafeAreaView
+      style={styles.container}
+      edges={['top', 'left', 'right', 'bottom']}
+    >
       <Appbar.Header style={{ backgroundColor: theme.colors.primary }}>
-        <Appbar.BackAction onPress={() => navigation.goBack()} />
-        <Appbar.Content title={categoryName} />
+        <Appbar.BackAction onPress={() => navigation.goBack()} color="#fff" />
+        <Appbar.Content title={categoryName} color="#fff" />
         <TouchableOpacity onPress={() => navigation.navigate('Cart')}>
           <View style={styles.cartButton}>
-            <Appbar.Action icon="shopping-cart" color="#fff" />
+            <Appbar.Action icon="cart" color="#fff" />
             {cartCount > 0 && <Badge style={styles.badge}>{cartCount}</Badge>}
           </View>
         </TouchableOpacity>
@@ -104,7 +112,7 @@ const SubCategoryScreen: React.FC<Props> = ({ navigation, route }) => {
                   </View>
                   <Image
                     source={{
-                      uri: `https://uports.in/admin${subcategory.image}`,
+                      uri: subcategory.image,
                     }}
                     style={styles.image}
                   />

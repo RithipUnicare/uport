@@ -25,17 +25,17 @@ type Props = NativeStackScreenProps<RootStackParamList, 'Register'>;
 
 const RegisterScreen: React.FC<Props> = ({ navigation }) => {
   const theme = useTheme();
-  const [step, setStep] = useState<'register' | 'otp'>('register');
   const [loading, setLoading] = useState(false);
 
   // Form fields
   const [name, setName] = useState('');
   const [mobile, setMobile] = useState('');
   const [password, setPassword] = useState('');
+  const [email, setEmail] = useState('');
   const [companyName, setCompanyName] = useState('');
+  const [landmark, setLandmark] = useState('');
   const [area, setArea] = useState('');
   const [address, setAddress] = useState('');
-  const [otp, setOtp] = useState('');
   const [areas, setAreas] = useState<any[]>([]);
   const [showPassword, setShowPassword] = useState(false);
 
@@ -45,9 +45,9 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
 
   const loadAreas = async () => {
     try {
-      const response = await AuthService.getAreas();
-      if (response.status === 1 && response.result) {
-        setAreas(response.result);
+      const response: any = await AuthService.getAreas();
+      if (response.status === 1 && response.products) {
+        setAreas(response.products);
       }
     } catch (error) {
       console.error('Error loading areas:', error);
@@ -56,7 +56,16 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
 
   const handleRegister = async () => {
     // Validation
-    if (!name || !mobile || !password || !companyName || !area || !address) {
+    if (
+      !name ||
+      !mobile ||
+      !password ||
+      !email ||
+      !companyName ||
+      !landmark ||
+      !area ||
+      !address
+    ) {
       Toast.show({
         type: 'error',
         text1: 'Error',
@@ -81,7 +90,9 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
         name,
         mobile,
         password,
+        email,
         company_name: companyName,
+        landmark,
         area_id: area,
         address,
       });
@@ -89,10 +100,10 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
       if (response.status === 1) {
         Toast.show({
           type: 'success',
-          text1: 'Success',
-          text2: 'OTP sent to your mobile number',
+          text1: 'Registration Successful',
+          text2: response.message || 'You can now login',
         });
-        setStep('otp');
+        navigation.replace('Login');
       } else {
         Toast.show({
           type: 'error',
@@ -111,46 +122,6 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
     }
   };
 
-  const handleVerifyOtp = async () => {
-    if (!otp) {
-      Toast.show({
-        type: 'error',
-        text1: 'Error',
-        text2: 'Please enter OTP',
-      });
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      const response = await AuthService.verifyOtp(mobile, otp);
-
-      if (response.status === 1) {
-        Toast.show({
-          type: 'success',
-          text1: 'Success',
-          text2: 'Registration successful!',
-        });
-        navigation.replace('Home');
-      } else {
-        Toast.show({
-          type: 'error',
-          text1: 'Invalid OTP',
-          text2: response.message || 'Please try again',
-        });
-      }
-    } catch (error) {
-      Toast.show({
-        type: 'error',
-        text1: 'Error',
-        text2: 'OTP verification failed',
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
     <SafeAreaView
       style={styles.container}
@@ -158,13 +129,12 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
     >
       <KeyboardAvoidingView
         style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 20 : 20}
       >
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <View style={styles.header}>
-            <Text style={styles.title}>
-              {step === 'register' ? 'Register' : 'Verify OTP'}
-            </Text>
+            <Text style={styles.title}>Register</Text>
             <TouchableOpacity
               style={styles.closeButton}
               onPress={() => navigation.goBack()}
@@ -183,111 +153,104 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
             </Text>
           </View>
 
-          {step === 'register' ? (
-            <View style={styles.formContainer}>
-              <TextInput
-                label="Name"
-                value={name}
-                onChangeText={setName}
-                mode="outlined"
-                style={styles.input}
-              />
+          <View style={styles.formContainer}>
+            <TextInput
+              label="Name"
+              value={name}
+              onChangeText={setName}
+              mode="outlined"
+              style={styles.input}
+            />
 
-              <TextInput
-                label="Mobile Number"
-                value={mobile}
-                onChangeText={setMobile}
-                keyboardType="phone-pad"
-                maxLength={10}
-                mode="outlined"
-                style={styles.input}
-              />
+            <TextInput
+              label="Mobile Number"
+              value={mobile}
+              onChangeText={setMobile}
+              keyboardType="phone-pad"
+              maxLength={10}
+              mode="outlined"
+              style={styles.input}
+            />
 
-              <TextInput
-                label="Create Password"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry={!showPassword}
-                mode="outlined"
-                style={styles.input}
-                right={
-                  <TextInput.Icon
-                    icon={showPassword ? 'eye-off' : 'eye'}
-                    onPress={() => setShowPassword(!showPassword)}
+            <TextInput
+              label="Create Password"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry={!showPassword}
+              mode="outlined"
+              style={styles.input}
+              right={
+                <TextInput.Icon
+                  icon={showPassword ? 'eye-off' : 'eye'}
+                  onPress={() => setShowPassword(!showPassword)}
+                />
+              }
+            />
+
+            <TextInput
+              label="Email"
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              mode="outlined"
+              style={styles.input}
+            />
+
+            <TextInput
+              label="Company Name"
+              value={companyName}
+              onChangeText={setCompanyName}
+              mode="outlined"
+              style={styles.input}
+            />
+
+            <TextInput
+              label="Landmark"
+              value={landmark}
+              onChangeText={setLandmark}
+              mode="outlined"
+              style={styles.input}
+            />
+
+            <View style={styles.pickerContainer}>
+              <Text style={styles.pickerLabel}>Select Your Area</Text>
+              <Picker
+                selectedValue={area}
+                onValueChange={setArea}
+                style={styles.picker}
+              >
+                <Picker.Item label="Select Your area" value="" />
+                {areas.map((item: any) => (
+                  <Picker.Item
+                    key={item.id}
+                    label={item.name}
+                    value={item.id.toString()}
                   />
-                }
-              />
-
-              <TextInput
-                label="Company Name"
-                value={companyName}
-                onChangeText={setCompanyName}
-                mode="outlined"
-                style={styles.input}
-              />
-
-              <View style={styles.pickerContainer}>
-                <Text style={styles.pickerLabel}>Select Your Area</Text>
-                <Picker
-                  selectedValue={area}
-                  onValueChange={setArea}
-                  style={styles.picker}
-                >
-                  <Picker.Item label="Select Your area" value="" />
-                  {areas.map((item: any) => (
-                    <Picker.Item
-                      key={item.id}
-                      label={item.name}
-                      value={item.id.toString()}
-                    />
-                  ))}
-                </Picker>
-              </View>
-
-              <TextInput
-                label="Address"
-                value={address}
-                onChangeText={setAddress}
-                mode="outlined"
-                multiline
-                numberOfLines={3}
-                style={styles.input}
-              />
-
-              <Button
-                mode="contained"
-                onPress={handleRegister}
-                loading={loading}
-                disabled={loading}
-                style={styles.button}
-                contentStyle={styles.buttonContent}
-              >
-                Sign up
-              </Button>
+                ))}
+              </Picker>
             </View>
-          ) : (
-            <View style={styles.formContainer}>
-              <TextInput
-                label="Enter OTP"
-                value={otp}
-                onChangeText={setOtp}
-                keyboardType="number-pad"
-                mode="outlined"
-                style={styles.input}
-              />
 
-              <Button
-                mode="contained"
-                onPress={handleVerifyOtp}
-                loading={loading}
-                disabled={loading}
-                style={styles.button}
-                contentStyle={styles.buttonContent}
-              >
-                Submit
-              </Button>
-            </View>
-          )}
+            <TextInput
+              label="Address"
+              value={address}
+              onChangeText={setAddress}
+              mode="outlined"
+              multiline
+              numberOfLines={3}
+              style={styles.input}
+            />
+
+            <Button
+              mode="contained"
+              onPress={handleRegister}
+              loading={loading}
+              disabled={loading}
+              style={styles.button}
+              contentStyle={styles.buttonContent}
+            >
+              Sign up
+            </Button>
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

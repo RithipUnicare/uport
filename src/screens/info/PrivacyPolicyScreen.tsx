@@ -11,10 +11,13 @@ const PrivacyPolicyScreen: React.FC<Props> = ({ navigation }) => {
   const theme = useTheme();
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+    <SafeAreaView
+      style={styles.container}
+      edges={['top', 'left', 'right', 'bottom']}
+    >
       <Appbar.Header style={{ backgroundColor: theme.colors.primary }}>
-        <Appbar.BackAction onPress={() => navigation.goBack()} />
-        <Appbar.Content title="Privacy Policy" />
+        <Appbar.BackAction onPress={() => navigation.goBack()} color="#fff" />
+        <Appbar.Content title="Privacy Policy" color="#fff" />
       </Appbar.Header>
 
       <ScrollView style={styles.content}>

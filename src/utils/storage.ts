@@ -50,15 +50,31 @@ export const StorageService = {
 
   // User specific methods
   async saveUser(user: {
-    id: number;
-    name: string;
-    user_type: number;
-    token: string;
+    user_id?: string;
+    id?: number;
+    username?: string;
+    name?: string;
+    user_type?: string;
+    token?: string;
+    minimum_qty?: number;
+    pincode?: string;
+    area?: string;
   }): Promise<void> {
-    await this.setItem(STORAGE_KEYS.USER_ID, user.id.toString());
-    await this.setItem(STORAGE_KEYS.USER_NAME, user.name);
-    await this.setItem(STORAGE_KEYS.USER_TYPE, user.user_type.toString());
-    await this.setItem(STORAGE_KEYS.TOKEN, user.token);
+    // Support both new (user_id) and old (id) formats
+    const userId = user.user_id || user.id?.toString() || '';
+    const userName = user.username || user.name || '';
+    const userType = user.user_type || '1';
+    const token = user.token || '';
+
+    await this.setItem(STORAGE_KEYS.USER_ID, userId);
+    await this.setItem(STORAGE_KEYS.USER_NAME, userName);
+    await this.setItem(STORAGE_KEYS.USER_TYPE, userType);
+    await this.setItem(STORAGE_KEYS.TOKEN, token);
+
+    // Store additional user info if available
+    if (user.minimum_qty) {
+      await this.setItem(STORAGE_KEYS.MIN_QTY, user.minimum_qty.toString());
+    }
   },
 
   async getUser(): Promise<{

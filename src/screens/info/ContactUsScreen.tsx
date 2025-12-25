@@ -12,10 +12,13 @@ const ContactUsScreen: React.FC<Props> = ({ navigation }) => {
   const theme = useTheme();
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+    <SafeAreaView
+      style={styles.container}
+      edges={['top', 'left', 'right', 'bottom']}
+    >
       <Appbar.Header style={{ backgroundColor: theme.colors.primary }}>
-        <Appbar.BackAction onPress={() => navigation.goBack()} />
-        <Appbar.Content title="Contact Us" />
+        <Appbar.BackAction onPress={() => navigation.goBack()} color="#fff" />
+        <Appbar.Content title="Contact Us" color="#fff" />
       </Appbar.Header>
 
       <View style={styles.content}>

@@ -12,6 +12,7 @@ import {
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/AppNavigator';
 import CartService from '../../services/cart.service';
+import OrderService from '../../services/order.service';
 import { StorageService } from '../../utils/storage';
 import Toast from 'react-native-toast-message';
 
@@ -19,6 +20,7 @@ type Props = NativeStackScreenProps<RootStackParamList, 'Cart'>;
 
 interface CartItem {
   id: number;
+  product_id: number;
   product_name: string;
   product_image: string;
   sales_price: number;
@@ -32,19 +34,25 @@ const CartScreen: React.FC<Props> = ({ navigation }) => {
   const [loading, setLoading] = useState(false);
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [deliveryCharge, setDeliveryCharge] = useState(0);
+  const [minimumOrder, setMinimumOrder] = useState(0);
+  const [userId, setUserId] = useState<number | null>(null);
 
   React.useEffect(() => {
     loadCart();
   }, []);
 
   const loadCart = async () => {
-    const userId = await StorageService.getItem('user_id');
-    if (!userId) return;
+    const userIdStr = await StorageService.getItem('user_id');
+    if (!userIdStr) return;
+
+    const uid = parseInt(userIdStr);
+    setUserId(uid);
 
     try {
-      const [cartRes, deliveryRes] = await Promise.all([
-        CartService.getCartDetails(parseInt(userId)),
-        CartService.getDeliveryCharge(parseInt(userId)),
+      const [cartRes, deliveryRes, minOrderRes] = await Promise.all([
+        CartService.getCartDetails(uid),
+        CartService.getDeliveryCharge(uid),
+        OrderService.getMinimumOrder(),
       ]);
 
       if (cartRes.status === 1 && cartRes.result) {
@@ -54,16 +62,24 @@ const CartScreen: React.FC<Props> = ({ navigation }) => {
       if (deliveryRes.status === 1 && deliveryRes.result?.area) {
         setDeliveryCharge(deliveryRes.result.area.delivery_charge || 0);
       }
+
+      if (minOrderRes.status === 1 && minOrderRes.minimum_order) {
+        setMinimumOrder(minOrderRes.minimum_order);
+      }
     } catch (error) {
       console.error('Error loading cart:', error);
     }
   };
 
-  const updateQuantity = async (itemId: number, newQuantity: number) => {
-    if (newQuantity < 1) return;
+  const updateQuantity = async (productId: number, increment: number) => {
+    if (!userId) return;
 
     try {
-      await CartService.updateCart({ id: itemId, quantity: newQuantity });
+      await CartService.addToCart({
+        user_id: userId,
+        product_id: productId,
+        quantity: increment, // +1 to add, -1 to subtract
+      });
       await loadCart();
     } catch (error) {
       Toast.show({
@@ -100,16 +116,73 @@ const CartScreen: React.FC<Props> = ({ navigation }) => {
     return subtotal + deliveryCharge;
   };
 
+  const handleCheckout = async () => {
+    if (!userId) {
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Please login to continue',
+      });
+      return;
+    }
+
+    if (subtotal < minimumOrder) {
+      Toast.show({
+        type: 'error',
+        text1: 'Minimum Order',
+        text2: `Minimum order amount is ₹${minimumOrder}`,
+      });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const products = cartItems.map(item => ({
+        product_id: item.product_id,
+        quantity: item.quantity,
+      }));
+
+      const response = await OrderService.placeOrder(userId, products);
+
+      if (response.status === 1) {
+        Toast.show({
+          type: 'success',
+          text1: 'Success',
+          text2: 'Order placed successfully',
+        });
+        navigation.navigate('MyOrders');
+      } else {
+        Toast.show({
+          type: 'error',
+          text1: 'Error',
+          text2: response.message || 'Failed to place order',
+        });
+      }
+    } catch (error) {
+      console.error('Error placing order:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Failed to place order',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const subtotal = cartItems.reduce(
     (sum, item) => sum + item.sales_price * item.quantity,
     0,
   );
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+    <SafeAreaView
+      style={styles.container}
+      edges={['top', 'left', 'right', 'bottom']}
+    >
       <Appbar.Header style={{ backgroundColor: theme.colors.primary }}>
-        <Appbar.BackAction onPress={() => navigation.goBack()} />
-        <Appbar.Content title="My Cart" />
+        <Appbar.BackAction onPress={() => navigation.goBack()} color="#fff" />
+        <Appbar.Content title="My Cart" color="#fff" />
       </Appbar.Header>
 
       {cartItems.length === 0 ? (
@@ -150,18 +223,14 @@ const CartScreen: React.FC<Props> = ({ navigation }) => {
                     <View style={styles.quantityContainer}>
                       <TouchableOpacity
                         style={styles.quantityButton}
-                        onPress={() =>
-                          updateQuantity(item.id, item.quantity - 1)
-                        }
+                        onPress={() => updateQuantity(item.product_id, -1)}
                       >
                         <Text style={styles.quantityButtonText}>-</Text>
                       </TouchableOpacity>
                       <Text style={styles.quantity}>{item.quantity}</Text>
                       <TouchableOpacity
                         style={styles.quantityButton}
-                        onPress={() =>
-                          updateQuantity(item.id, item.quantity + 1)
-                        }
+                        onPress={() => updateQuantity(item.product_id, 1)}
                       >
                         <Text style={styles.quantityButtonText}>+</Text>
                       </TouchableOpacity>
@@ -203,16 +272,14 @@ const CartScreen: React.FC<Props> = ({ navigation }) => {
             </View>
             <Button
               mode="contained"
-              onPress={() => {
-                Toast.show({
-                  type: 'info',
-                  text1: 'Checkout',
-                  text2: 'Proceeding to checkout...',
-                });
-              }}
+              onPress={handleCheckout}
               style={styles.checkoutButton}
+              loading={loading}
+              disabled={loading || subtotal < minimumOrder}
             >
-              Proceed to Checkout
+              {subtotal < minimumOrder
+                ? `Minimum Order: ₹${minimumOrder}`
+                : 'Proceed to Checkout'}
             </Button>
           </View>
         </>

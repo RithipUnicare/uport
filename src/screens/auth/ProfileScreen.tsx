@@ -12,6 +12,7 @@ import {
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/AppNavigator';
 import AuthService from '../../services/auth.service';
+import { CommonActions } from '@react-navigation/native';
 import { StorageService } from '../../utils/storage';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Profile'>;
@@ -33,11 +34,22 @@ const ProfileScreen: React.FC<Props> = ({ navigation }) => {
 
   const handleLogout = async () => {
     await AuthService.logout();
-    navigation.replace('Login');
+    navigation.dispatch(
+      CommonActions.reset({
+        index: 0,
+        routes: [{ name: 'Login' }],
+      }),
+    );
+    StorageService.removeItem('user_id');
+    StorageService.removeItem('user_type');
+    StorageService.removeItem('user_name');
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+    <SafeAreaView
+      style={styles.container}
+      edges={['top', 'left', 'right', 'bottom']}
+    >
       <Appbar.Header style={{ backgroundColor: theme.colors.primary }}>
         <Appbar.BackAction onPress={() => navigation.goBack()} />
         <Appbar.Content title="My Account" />

@@ -1,6 +1,7 @@
 import ApiService from './api';
 import {
   CategoryResponse,
+  SubCategoryResponse,
   ProductResponse,
   APIResponse,
   BannerResponse,
@@ -20,8 +21,8 @@ class ProductService {
   }
 
   // Get subcategories
-  async getSubCategories(categoryId: number): Promise<APIResponse> {
-    return await ApiService.get<APIResponse>(
+  async getSubCategories(categoryId: number): Promise<SubCategoryResponse> {
+    return await ApiService.get<SubCategoryResponse>(
       `/api/v1/GetSubCategoryBB/${categoryId}`,
     );
   }

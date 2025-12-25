@@ -7,12 +7,33 @@ export interface LoginRequest {
   password: string;
 }
 
+export interface LoginResponse {
+  status: number;
+  message?: string;
+  user_id?: string;
+  username?: string;
+  token?: string;
+  user_type?: string;
+  minimum_qty?: number;
+  pincode?: string;
+  area?: string;
+}
+
 export interface RegisterRequest {
   name: string;
   mobile: string;
   password: string;
+  email: string;
   company_name: string;
+  landmark: string;
+  address: string;
   area_id: string;
+}
+
+export interface UpdateProfileRequest {
+  user_id: string;
+  name: string;
+  landmark: string;
   address: string;
 }
 
@@ -23,19 +44,24 @@ export interface ChangePasswordRequest {
 
 class AuthService {
   // Login
-  async login(data: LoginRequest): Promise<APIResponse<User>> {
-    const response = await ApiService.post<APIResponse<User>>(
-      '/api/v1/Login',
-      data,
-    );
+  async login(data: LoginRequest): Promise<LoginResponse> {
+    const response = await ApiService.post<LoginResponse>('/api/v1/login', {
+      customer: {
+        mobile: data.mobile,
+        password: data.password,
+      },
+    });
 
-    if (response.status === 1 && response.result) {
-      // Save user data to storage
+    if (response.status === 1) {
+      // Save user data to storage - the response contains user data directly
       await StorageService.saveUser({
-        id: response.result.id,
-        name: response.result.name,
-        user_type: response.result.user_type,
-        token: response.result.token || '',
+        user_id: response.user_id,
+        username: response.username,
+        user_type: response.user_type,
+        token: response.token,
+        minimum_qty: response.minimum_qty,
+        pincode: response.pincode,
+        area: response.area,
       });
     }
 
@@ -44,7 +70,18 @@ class AuthService {
 
   // Register - Step 1: Send OTP
   async register(data: RegisterRequest): Promise<APIResponse> {
-    return await ApiService.post<APIResponse>('/api/v1/Register', data);
+    return await ApiService.post<APIResponse>('/api/v1/send_otp', {
+      customer: {
+        name: data.name,
+        mobile: data.mobile,
+        password: data.password,
+        email: data.email,
+        company_name: data.company_name,
+        landmark: data.landmark,
+        address: data.address,
+        area_id: data.area_id,
+      },
+    });
   }
 
   // Register - Step 2: Verify OTP
@@ -58,12 +95,8 @@ class AuthService {
     );
 
     if (response.status === 1 && response.result) {
-      await StorageService.saveUser({
-        id: response.result.id,
-        name: response.result.name,
-        user_type: response.result.user_type,
-        token: response.result.token || '',
-      });
+      //@ts-ignore
+      await StorageService.saveUser(response.result);
     }
 
     return response;
@@ -71,7 +104,7 @@ class AuthService {
 
   // Change Password
   async changePassword(data: ChangePasswordRequest): Promise<APIResponse> {
-    return await ApiService.post<APIResponse>('/api/v1/ChangePassword', data);
+    return await ApiService.post<APIResponse>('/api/v1/reset_password', data);
   }
 
   // Logout
@@ -94,9 +127,19 @@ class AuthService {
     return await StorageService.getUser();
   }
 
-  // Get areas for registration dropdown
+  // Get user profile
+  async getMyProfile(userId: string): Promise<APIResponse> {
+    return await ApiService.get<APIResponse>(`/api/v1/MyProfile/${userId}`);
+  }
+
+  // Update user profile
+  async updateProfile(data: UpdateProfileRequest): Promise<APIResponse> {
+    return await ApiService.post<APIResponse>('/api/v1/UpdateProfile', data);
+  }
+
+  // Get available areas for registration dropdown
   async getAreas(): Promise<APIResponse> {
-    return await ApiService.get<APIResponse>('/api/v1/GetAreas');
+    return await ApiService.get<APIResponse>('/api/v1/GetArea');
   }
 }
 
