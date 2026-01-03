@@ -94,6 +94,28 @@ class AuthService {
       },
     );
 
+    return response;
+  }
+
+  // Register - Step 3: Complete B2B User Registration
+  async registerB2BUser(data: {
+    name: string;
+    mobile: string;
+    password: string;
+    email: string;
+    area_id: string;
+  }): Promise<APIResponse<User>> {
+    const response = await ApiService.post<APIResponse<User>>(
+      '/api/v1/BBUserRegister',
+      {
+        name: data.name,
+        mobile: data.mobile,
+        password: data.password,
+        email: data.email,
+        area_id: data.area_id,
+      },
+    );
+
     if (response.status === 1 && response.result) {
       //@ts-ignore
       await StorageService.saveUser(response.result);

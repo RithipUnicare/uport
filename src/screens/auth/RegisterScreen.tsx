@@ -86,7 +86,7 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
     setLoading(true);
 
     try {
-      const response = await AuthService.register({
+      const response: any = await AuthService.register({
         name,
         mobile,
         password,
@@ -100,14 +100,25 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
       if (response.status === 1) {
         Toast.show({
           type: 'success',
-          text1: 'Registration Successful',
-          text2: response.message || 'You can now login',
+          text1: 'OTP Sent',
+          text2: response.message || 'We sent OTP code to your mobile.',
         });
-        navigation.replace('Login');
+
+        // Navigate to VerifyOtpScreen with OTP and registration data
+        navigation.navigate('VerifyOtp', {
+          otp: response.otp,
+          registerData: {
+            name,
+            mobile,
+            password,
+            email,
+            area_id: area,
+          },
+        });
       } else {
         Toast.show({
           type: 'error',
-          text1: 'Registration Failed',
+          text1: 'Failed',
           text2: response.message || 'Please try again',
         });
       }
@@ -115,7 +126,7 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
       Toast.show({
         type: 'error',
         text1: 'Error',
-        text2: 'Registration failed. Please try again.',
+        text2: 'Failed to send OTP. Please try again.',
       });
     } finally {
       setLoading(false);

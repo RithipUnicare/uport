@@ -7,6 +7,7 @@ import { StorageService, STORAGE_KEYS } from '../utils/storage';
 // Auth screens
 import LoginScreen from '../screens/auth/LoginScreen';
 import RegisterScreen from '../screens/auth/RegisterScreen';
+import VerifyOtpScreen from '../screens/auth/VerifyOtpScreen';
 import ProfileScreen from '../screens/auth/ProfileScreen';
 import ChangePasswordScreen from '../screens/auth/ChangePasswordScreen';
 
@@ -33,6 +34,16 @@ import PrivacyPolicyScreen from '../screens/info/PrivacyPolicyScreen';
 export type RootStackParamList = {
   Login: undefined;
   Register: undefined;
+  VerifyOtp: {
+    otp: number;
+    registerData: {
+      name: string;
+      mobile: string;
+      password: string;
+      email: string;
+      area_id: string;
+    };
+  };
   Home: undefined;
   SubCategory: { categoryId: number; categoryName: string };
   Product: { subcategoryId: number; subcategoryName: string };
@@ -99,6 +110,11 @@ const AppNavigator: React.FC = () => {
           <Stack.Screen
             name="Register"
             component={RegisterScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="VerifyOtp"
+            component={VerifyOtpScreen}
             options={{ headerShown: false }}
           />
           <Stack.Screen
