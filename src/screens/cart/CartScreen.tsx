@@ -1,5 +1,11 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import {
+  View,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  TextInput,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   Appbar,
@@ -216,7 +222,7 @@ const CartScreen: React.FC<Props> = ({ navigation }) => {
         <>
           <ScrollView style={styles.content}>
             {cartItems.map(item => (
-              <Card key={item.id} style={styles.cartItem}>
+              <Card key={item.product_id} style={styles.cartItem}>
                 <Card.Content>
                   <View style={styles.itemHeader}>
                     <Text variant="titleMedium" style={styles.itemName}>
@@ -255,7 +261,22 @@ const CartScreen: React.FC<Props> = ({ navigation }) => {
                       >
                         <Text style={styles.quantityButtonText}>-</Text>
                       </TouchableOpacity>
-                      <Text style={styles.quantity}>{item.quantity}</Text>
+                      <TextInput
+                        style={[
+                          styles.quantityInput,
+                          { backgroundColor: '#f3ececff' },
+                        ]}
+                        value={item.quantity.toString()}
+                        keyboardType="numeric"
+                        onChangeText={text => {
+                          const qty = parseInt(text) || 0;
+                          // if (qty !== item.quantity) {
+                          //   const diff = qty - item.quantity;
+                          //   updateQuantity(item.product_id, diff);
+                          // }
+                          updateQuantity(item.product_id, qty);
+                        }}
+                      />
                       <TouchableOpacity
                         style={styles.quantityButton}
                         onPress={() =>
@@ -399,6 +420,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     fontSize: 16,
     color: '#0A70A4',
+  },
+  quantityInput: {
+    paddingHorizontal: 15,
+    fontSize: 16,
+    color: '#0A70A4',
+    minWidth: 50,
+    textAlign: 'center',
   },
   priceCard: {
     margin: 10,

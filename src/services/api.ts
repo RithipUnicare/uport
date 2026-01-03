@@ -1,7 +1,7 @@
 import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
 import { StorageService, STORAGE_KEYS } from '../utils/storage';
 
-const BASE_URL = 'http://routegadi.com/admin/';
+export const BASE_URL = 'http://routegadi.com/admin/';
 
 class ApiService {
   private api: AxiosInstance;

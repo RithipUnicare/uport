@@ -27,7 +27,7 @@ import ApiService from '../../services/api';
 import { StorageService } from '../../utils/storage';
 import CameraService from '../../services/camera.service';
 import Toast from 'react-native-toast-message';
-
+import { BASE_URL } from '../../services/api';
 type Props = NativeStackScreenProps<RootStackParamList, 'Home'>;
 
 const { width } = Dimensions.get('window');
@@ -192,7 +192,7 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
         {banners.length > 0 && (
           <View style={styles.bannerContainer}>
             <Image
-              source={{ uri: banners[currentBannerIndex] }}
+              source={{ uri: `${BASE_URL}${banners[currentBannerIndex]}` }}
               style={styles.bannerImage}
               resizeMode="center"
             />
