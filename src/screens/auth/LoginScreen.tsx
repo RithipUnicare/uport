@@ -15,6 +15,8 @@ import {
   Text,
   ActivityIndicator,
   useTheme,
+  Card,
+  Title,
 } from 'react-native-paper';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/AppNavigator';
@@ -104,71 +106,81 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
                   { backgroundColor: theme.colors.primary },
                 ]}
               >
-                <Text style={styles.logoText}>UPORT</Text>
+                {/* <Text style={styles.logoText}>UPORT</Text> */}
               </View>
             </View>
+            <Title style={styles.title}>UPORT</Title>
             <Text style={styles.subtitle}>B2B Grocery Shopping</Text>
-            <Text style={styles.welcomeText}>
-              Your number and other details are safe with us
-            </Text>
           </View>
 
-          <View style={styles.formContainer}>
-            <TextInput
-              label="Mobile Number"
-              value={mobile}
-              onChangeText={setMobile}
-              keyboardType="phone-pad"
-              maxLength={10}
-              mode="outlined"
-              style={styles.input}
-              left={<TextInput.Icon icon="phone" />}
-            />
+          <View style={styles.cardContainer}>
+            <Card style={styles.card}>
+              <Card.Content>
+                <Text style={styles.cardTitle}>Welcome Back!</Text>
+                <Text style={styles.cardSubtitle}>Login to your account</Text>
 
-            <TextInput
-              label="Password"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry={!showPassword}
-              mode="outlined"
-              style={styles.input}
-              left={<TextInput.Icon icon="lock" />}
-              right={
-                <TextInput.Icon
-                  icon={showPassword ? 'eye-off' : 'eye'}
-                  onPress={() => setShowPassword(!showPassword)}
+                <TextInput
+                  label="Mobile Number"
+                  value={mobile}
+                  onChangeText={setMobile}
+                  keyboardType="phone-pad"
+                  maxLength={10}
+                  mode="outlined"
+                  style={styles.input}
+                  left={<TextInput.Icon icon="phone" />}
+                  theme={{ roundness: 10 }}
                 />
-              }
-            />
 
-            <Button
-              mode="contained"
-              onPress={handleLogin}
-              loading={loading}
-              disabled={loading}
-              style={styles.loginButton}
-              contentStyle={styles.buttonContent}
-            >
-              Login
-            </Button>
+                <TextInput
+                  label="Password"
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry={!showPassword}
+                  mode="outlined"
+                  style={styles.input}
+                  left={<TextInput.Icon icon="lock" />}
+                  right={
+                    <TextInput.Icon
+                      icon={showPassword ? 'eye-off' : 'eye'}
+                      onPress={() => setShowPassword(!showPassword)}
+                    />
+                  }
+                  theme={{ roundness: 10 }}
+                />
 
-            <View style={styles.linksContainer}>
-              <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-                <Text
-                  style={[styles.linkText, { color: theme.colors.primary }]}
+                <Button
+                  mode="contained"
+                  onPress={handleLogin}
+                  loading={loading}
+                  disabled={loading}
+                  style={styles.loginButton}
+                  contentStyle={styles.buttonContent}
+                  labelStyle={styles.buttonLabel}
                 >
-                  New user? Sign up
-                </Text>
-              </TouchableOpacity>
+                  Login
+                </Button>
 
-              {/* <TouchableOpacity>
+                <View style={styles.linksContainer}>
+                  <TouchableOpacity
+                    onPress={() => navigation.navigate('Register')}
+                  >
+                    <Text
+                      style={[styles.linkText, { color: theme.colors.primary }]}
+                    >
+                      New user? Sign up
+                    </Text>
+                  </TouchableOpacity>
+
+                  {/* <TouchableOpacity>
                 <Text
                   style={[styles.linkText, { color: theme.colors.primary }]}
                 >
                   Forgot Password?
                 </Text>
               </TouchableOpacity> */}
-            </View>
+                </View>
+              </Card.Content>
+            </Card>
           </View>
 
           {loading && (
@@ -185,62 +197,76 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#f5f5f5',
   },
   flex: {
     flex: 1,
   },
   scrollContent: {
     flexGrow: 1,
+    justifyContent: 'center',
   },
   header: {
-    backgroundColor: '#b90617',
-    paddingVertical: 40,
-    paddingHorizontal: 20,
     alignItems: 'center',
+    marginBottom: 30,
+    marginTop: 20,
   },
   logoContainer: {
-    marginBottom: 20,
-  },
-  logoPlaceholder: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  logoText: {
-    color: '#fff',
-    fontSize: 24,
-    fontWeight: 'bold',
-  },
-  subtitle: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
     marginBottom: 10,
   },
-  welcomeText: {
-    color: '#fff',
-    fontSize: 14,
-    textAlign: 'center',
+  title: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#b90617',
+    marginBottom: 5,
   },
-  formContainer: {
-    padding: 20,
+  subtitle: {
+    color: '#666',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  cardContainer: {
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+  },
+  card: {
+    elevation: 4,
+    borderRadius: 15,
+    backgroundColor: '#fff',
+  },
+  cardTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 5,
+    textAlign: 'center',
+    color: '#333',
+  },
+  cardSubtitle: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 20,
   },
   input: {
     marginBottom: 15,
+    backgroundColor: '#fff',
   },
   loginButton: {
     marginTop: 10,
     marginBottom: 20,
+    borderRadius: 10,
+    elevation: 2,
   },
   buttonContent: {
     height: 50,
   },
+  buttonLabel: {
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
   linksContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     marginTop: 10,
   },
   linkText: {

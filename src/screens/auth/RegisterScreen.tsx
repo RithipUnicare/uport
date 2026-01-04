@@ -14,12 +14,14 @@ import {
   Text,
   ActivityIndicator,
   useTheme,
+  Card,
+  Title,
 } from 'react-native-paper';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/AppNavigator';
 import AuthService from '../../services/auth.service';
 import Toast from 'react-native-toast-message';
-import { Picker } from '@react-native-picker/picker';
+import { Dropdown } from 'react-native-element-dropdown';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Register'>;
 
@@ -38,6 +40,7 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
   const [address, setAddress] = useState('');
   const [areas, setAreas] = useState<any[]>([]);
   const [showPassword, setShowPassword] = useState(false);
+  const [isFocus, setIsFocus] = useState(false);
 
   useEffect(() => {
     loadAreas();
@@ -47,7 +50,12 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
     try {
       const response: any = await AuthService.getAreas();
       if (response.status === 1 && response.products) {
-        setAreas(response.products);
+        // Map the API response to the format expected by Dropdown
+        const formattedAreas = response.products.map((item: any) => ({
+          label: item.name,
+          value: item.id.toString(),
+        }));
+        setAreas(formattedAreas);
       }
     } catch (error) {
       console.error('Error loading areas:', error);
@@ -145,122 +153,136 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
       >
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <View style={styles.header}>
-            <Text style={styles.title}>Register</Text>
+            <Title style={styles.headerTitle}>Create Account</Title>
+            <Text style={styles.headerSubtitle}>Sign up to get started</Text>
             <TouchableOpacity
               style={styles.closeButton}
               onPress={() => navigation.goBack()}
             >
               <Text style={styles.closeText}>✕</Text>
             </TouchableOpacity>
-            {/* <View style={styles.logoContainer}>
-              <View
-                style={[styles.logo, { backgroundColor: theme.colors.primary }]}
-              >
-                <Text style={styles.logoText}>UPORT</Text>
-              </View>
-            </View> */}
-            <Text style={styles.subtitle}>
-              Your number and other details are safe with us
-            </Text>
           </View>
 
-          <View style={styles.formContainer}>
-            <TextInput
-              label="Name"
-              value={name}
-              onChangeText={setName}
-              mode="outlined"
-              style={styles.input}
-            />
-
-            <TextInput
-              label="Mobile Number"
-              value={mobile}
-              onChangeText={setMobile}
-              keyboardType="phone-pad"
-              maxLength={10}
-              mode="outlined"
-              style={styles.input}
-            />
-
-            <TextInput
-              label="Create Password"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry={!showPassword}
-              mode="outlined"
-              style={styles.input}
-              right={
-                <TextInput.Icon
-                  icon={showPassword ? 'eye-off' : 'eye'}
-                  onPress={() => setShowPassword(!showPassword)}
+          <View style={styles.contentContainer}>
+            <Card style={styles.card}>
+              <Card.Content>
+                <TextInput
+                  label="Name"
+                  value={name}
+                  onChangeText={setName}
+                  mode="outlined"
+                  style={styles.input}
+                  theme={{ roundness: 10 }}
                 />
-              }
-            />
 
-            <TextInput
-              label="Email"
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              mode="outlined"
-              style={styles.input}
-            />
+                <TextInput
+                  label="Mobile Number"
+                  value={mobile}
+                  onChangeText={setMobile}
+                  keyboardType="phone-pad"
+                  maxLength={10}
+                  mode="outlined"
+                  style={styles.input}
+                  theme={{ roundness: 10 }}
+                />
 
-            <TextInput
-              label="Company Name"
-              value={companyName}
-              onChangeText={setCompanyName}
-              mode="outlined"
-              style={styles.input}
-            />
+                <TextInput
+                  label="Create Password"
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry={!showPassword}
+                  mode="outlined"
+                  style={styles.input}
+                  right={
+                    <TextInput.Icon
+                      icon={showPassword ? 'eye-off' : 'eye'}
+                      onPress={() => setShowPassword(!showPassword)}
+                    />
+                  }
+                  theme={{ roundness: 10 }}
+                />
 
-            <TextInput
-              label="Landmark"
-              value={landmark}
-              onChangeText={setLandmark}
-              mode="outlined"
-              style={styles.input}
-            />
+                <TextInput
+                  label="Email"
+                  value={email}
+                  onChangeText={setEmail}
+                  keyboardType="email-address"
+                  mode="outlined"
+                  style={styles.input}
+                  theme={{ roundness: 10 }}
+                />
 
-            <View style={styles.pickerContainer}>
-              <Text style={styles.pickerLabel}>Select Your Area</Text>
-              <Picker
-                selectedValue={area}
-                onValueChange={setArea}
-                style={styles.picker}
-              >
-                <Picker.Item label="Select Your area" value="" />
-                {areas.map((item: any) => (
-                  <Picker.Item
-                    key={item.id}
-                    label={item.name}
-                    value={item.id.toString()}
+                <TextInput
+                  label="Company Name"
+                  value={companyName}
+                  onChangeText={setCompanyName}
+                  mode="outlined"
+                  style={styles.input}
+                  theme={{ roundness: 10 }}
+                />
+
+                <TextInput
+                  label="Landmark"
+                  value={landmark}
+                  onChangeText={setLandmark}
+                  mode="outlined"
+                  style={styles.input}
+                  theme={{ roundness: 10 }}
+                />
+
+                <View style={styles.dropdownContainer}>
+                  <Text style={styles.label}>Select Your Area</Text>
+                  <Dropdown
+                    style={[
+                      styles.dropdown,
+                      isFocus && { borderColor: theme.colors.primary },
+                    ]}
+                    placeholderStyle={styles.placeholderStyle}
+                    selectedTextStyle={styles.selectedTextStyle}
+                    inputSearchStyle={styles.inputSearchStyle}
+                    iconStyle={styles.iconStyle}
+                    data={areas}
+                    search
+                    maxHeight={300}
+                    labelField="label"
+                    valueField="value"
+                    placeholder={!isFocus ? 'Select area' : '...'}
+                    searchPlaceholder="Search..."
+                    value={area}
+                    mode="modal"
+                    onFocus={() => setIsFocus(true)}
+                    onBlur={() => setIsFocus(false)}
+                    onChange={item => {
+                      setArea(item.value);
+                      setIsFocus(false);
+                    }}
                   />
-                ))}
-              </Picker>
-            </View>
+                </View>
 
-            <TextInput
-              label="Address"
-              value={address}
-              onChangeText={setAddress}
-              mode="outlined"
-              multiline
-              numberOfLines={3}
-              style={styles.input}
-            />
+                <TextInput
+                  label="Address"
+                  value={address}
+                  onChangeText={setAddress}
+                  mode="outlined"
+                  multiline
+                  numberOfLines={3}
+                  style={styles.input}
+                  theme={{ roundness: 10 }}
+                />
 
-            <Button
-              mode="contained"
-              onPress={handleRegister}
-              loading={loading}
-              disabled={loading}
-              style={styles.button}
-              contentStyle={styles.buttonContent}
-            >
-              Sign up
-            </Button>
+                <Button
+                  mode="contained"
+                  onPress={handleRegister}
+                  loading={loading}
+                  disabled={loading}
+                  style={styles.button}
+                  contentStyle={styles.buttonContent}
+                  labelStyle={styles.buttonLabel}
+                >
+                  Sign up
+                </Button>
+              </Card.Content>
+            </Card>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -271,79 +293,100 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#f5f5f5',
   },
   flex: {
     flex: 1,
   },
   scrollContent: {
     flexGrow: 1,
+    paddingBottom: 20,
   },
   header: {
-    backgroundColor: '#b90617',
-    paddingVertical: 30,
+    paddingTop: 40,
+    paddingBottom: 20,
     paddingHorizontal: 20,
     alignItems: 'center',
+    backgroundColor: '#f5f5f5',
   },
-  title: {
-    fontSize: 20,
+  headerTitle: {
+    fontSize: 28,
     fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: 10,
+    color: '#b90617',
+    marginBottom: 5,
+  },
+  headerSubtitle: {
+    fontSize: 16,
+    color: '#666',
   },
   closeButton: {
     position: 'absolute',
-    top: 10,
+    top: 20,
     right: 20,
+    padding: 10,
   },
   closeText: {
-    color: '#fff',
+    color: '#333',
     fontSize: 24,
-  },
-  logoContainer: {
-    marginVertical: 20,
-  },
-  logo: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  logoText: {
-    color: '#fff',
-    fontSize: 18,
     fontWeight: 'bold',
   },
-  subtitle: {
-    color: '#fff',
-    fontSize: 14,
-    textAlign: 'center',
+  contentContainer: {
+    paddingHorizontal: 20,
   },
-  formContainer: {
-    padding: 20,
+  card: {
+    elevation: 4,
+    borderRadius: 15,
+    backgroundColor: '#fff',
+    marginBottom: 20,
   },
   input: {
     marginBottom: 15,
+    backgroundColor: '#fff',
   },
-  pickerContainer: {
+  dropdownContainer: {
     marginBottom: 15,
   },
-  pickerLabel: {
-    fontSize: 12,
+  label: {
+    fontSize: 14,
     color: '#666',
     marginBottom: 5,
+    fontWeight: '500',
   },
-  picker: {
+  dropdown: {
+    height: 50,
+    borderColor: '#79747E', // Outlined input border color
     borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 4,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    backgroundColor: '#fff',
+  },
+  placeholderStyle: {
+    fontSize: 16,
+    color: '#49454F',
+  },
+  selectedTextStyle: {
+    fontSize: 16,
+    color: '#1C1B1F',
+  },
+  iconStyle: {
+    width: 20,
+    height: 20,
+  },
+  inputSearchStyle: {
+    height: 40,
+    fontSize: 16,
   },
   button: {
     marginTop: 10,
+    borderRadius: 10,
+    elevation: 2,
   },
   buttonContent: {
     height: 50,
+  },
+  buttonLabel: {
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });
 
