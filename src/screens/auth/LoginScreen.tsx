@@ -95,7 +95,8 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
     >
       <KeyboardAvoidingView
         style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
       >
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <View style={styles.header}>
@@ -106,10 +107,10 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
                   { backgroundColor: theme.colors.primary },
                 ]}
               >
-                {/* <Text style={styles.logoText}>UPORT</Text> */}
+                {/* <Text style={styles.logoText}>ROUTEGADI</Text> */}
               </View>
             </View>
-            <Title style={styles.title}>UPORT</Title>
+            <Title style={styles.title}>ROUTEGADI</Title>
             <Text style={styles.subtitle}>B2B Grocery Shopping</Text>
           </View>
 

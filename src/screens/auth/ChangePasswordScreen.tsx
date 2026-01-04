@@ -79,8 +79,8 @@ const ChangePasswordScreen: React.FC<Props> = ({ navigation }) => {
       edges={['top', 'left', 'right', 'bottom']}
     >
       <Appbar.Header style={{ backgroundColor: theme.colors.primary }}>
-        <Appbar.BackAction onPress={() => navigation.goBack()} />
-        <Appbar.Content title="Change Password" />
+        <Appbar.BackAction onPress={() => navigation.goBack()} color="#fff" />
+        <Appbar.Content title="Change Password" color="#fff" />
       </Appbar.Header>
 
       <KeyboardAvoidingView
@@ -92,7 +92,7 @@ const ChangePasswordScreen: React.FC<Props> = ({ navigation }) => {
             <View
               style={[styles.logo, { backgroundColor: theme.colors.primary }]}
             >
-              <Text style={styles.logoText}>UPORT</Text>
+              <Text style={styles.logoText}>ROUTEGADI</Text>
             </View>
             <Text style={styles.subtitle}>
               Need to change password, Here you go...
@@ -154,7 +154,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 20,
   },
-  logoText: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
+  logoText: { color: '#fff', fontSize: 12, fontWeight: 'bold' },
   subtitle: { fontSize: 14, color: '#666', textAlign: 'center' },
   form: { padding: 20 },
   input: { marginBottom: 15 },

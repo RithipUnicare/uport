@@ -28,6 +28,7 @@ import { StorageService } from '../../utils/storage';
 import CameraService from '../../services/camera.service';
 import Toast from 'react-native-toast-message';
 import { BASE_URL } from '../../services/api';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 type Props = NativeStackScreenProps<RootStackParamList, 'Home'>;
 
 const { width } = Dimensions.get('window');
@@ -155,7 +156,7 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
       edges={['top', 'left', 'right', 'bottom']}
     >
       <Appbar.Header style={{ backgroundColor: theme.colors.primary }}>
-        <Appbar.Content title="Uport - B2B" color="#fff" />
+        <Appbar.Content title="Routegadi - B2B" color="#fff" />
         <TouchableOpacity onPress={() => navigation.navigate('Cart')}>
           <View style={styles.cartButton}>
             <Appbar.Action icon="cart" color="#fff" />
@@ -210,13 +211,11 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
           </View>
         )}
 
-        <Card style={styles.sectionCard}>
-          <Card.Content>
-            <Text variant="titleMedium" style={styles.sectionTitle}>
-              What Would You Like To Shop?
-            </Text>
-          </Card.Content>
-        </Card>
+        <View style={styles.sectionTitleContainer}>
+          <Text variant="titleMedium" style={styles.sectionTitle}>
+            What Would You Like To Shop?
+          </Text>
+        </View>
 
         <View style={styles.categoriesContainer}>
           {categories.map(category => (
@@ -230,79 +229,101 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
                 })
               }
             >
-              {category.image && ApiService.getImageUrl(category.image) ? (
-                <Image
-                  source={{
-                    uri: ApiService.getImageUrl(category.image),
-                  }}
-                  style={styles.categoryImage}
-                  resizeMode="cover"
-                />
-              ) : (
-                <View
-                  style={[
-                    styles.categoryImage,
-                    {
-                      backgroundColor: '#e0e0e0',
-                      justifyContent: 'center',
-                      alignItems: 'center',
-                    },
-                  ]}
-                >
-                  <Text style={{ color: '#999', fontSize: 12 }}>No Image</Text>
-                </View>
-              )}
-              <Text style={styles.categoryName}>{category.name}</Text>
+              <View style={styles.categoryImageContainer}>
+                {category.image && ApiService.getImageUrl(category.image) ? (
+                  <Image
+                    source={{
+                      uri: ApiService.getImageUrl(category.image),
+                    }}
+                    style={styles.categoryImage}
+                    resizeMode="contain"
+                  />
+                ) : (
+                  <View
+                    style={[
+                      styles.categoryImage,
+                      {
+                        backgroundColor: '#f0f0f0',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                      },
+                    ]}
+                  >
+                    <Text style={{ color: '#999', fontSize: 10 }}>
+                      No Image
+                    </Text>
+                  </View>
+                )}
+              </View>
+              <Text style={styles.categoryName} numberOfLines={2}>
+                {category.name}
+              </Text>
             </TouchableOpacity>
           ))}
         </View>
 
-        <Card style={styles.sectionCard}>
-          <Card.Content>
-            <Text variant="titleMedium" style={styles.sectionTitle}>
-              My Options?
-            </Text>
-          </Card.Content>
-        </Card>
+        <View style={styles.sectionTitleContainer}>
+          <Text variant="titleMedium" style={styles.sectionTitle}>
+            My Options
+          </Text>
+        </View>
 
-        <Card style={styles.optionCard} onPress={handleUploadList}>
-          <Card.Content style={styles.optionContent}>
-            <Image
-              source={require('../../../cordova-source/img/list.png')}
-              style={styles.optionIcon}
-            />
-            <View style={styles.optionText}>
-              <Text
-                variant="titleMedium"
-                style={{ color: '#4caf50', fontWeight: 'bold' }}
-              >
-                Upload Grocery List
-              </Text>
-              <Text variant="bodySmall">Camera/Gallery</Text>
+        <View style={styles.optionsGrid}>
+          <Card style={styles.optionCard} onPress={handleUploadList}>
+            <View style={styles.optionContent}>
+              <View style={styles.optionIconContainer}>
+                <Image
+                  source={require('../../../cordova-source/img/list.png')}
+                  style={styles.optionIcon}
+                />
+              </View>
+              <View style={styles.optionText}>
+                <Text
+                  variant="titleMedium"
+                  style={{ color: '#1a1a1a', fontWeight: 'bold' }}
+                >
+                  Upload Grocery List
+                </Text>
+                <Text variant="bodySmall" style={{ color: '#666' }}>
+                  Camera/Gallery
+                </Text>
+              </View>
+              <Appbar.Action icon="chevron-right" color="#ccc" />
             </View>
-          </Card.Content>
-        </Card>
+          </Card>
 
-        <Card
-          style={styles.optionCard}
-          onPress={() => navigation.navigate('MyOrders')}
-        >
-          <Card.Content style={styles.optionContent}>
-            <Image
-              source={require('../../../cordova-source/img/shopping-bag.svg')}
-              style={styles.optionIcon}
-            />
-            <View style={styles.optionText}>
-              <Text
-                variant="titleMedium"
-                style={{ color: '#4caf50', fontWeight: 'bold' }}
+          <Card
+            style={styles.optionCard}
+            onPress={() => navigation.navigate('MyOrders')}
+          >
+            <View style={styles.optionContent}>
+              <View
+                style={[
+                  styles.optionIconContainer,
+                  { backgroundColor: '#e3f2fd' },
+                ]}
               >
-                My Orders
-              </Text>
-              <Text variant="bodySmall">Reorder/Return</Text>
+                <MaterialCommunityIcons
+                  name="shopping-outline"
+                  size={24}
+                  color="#2196f3"
+                />
+              </View>
+              <View style={styles.optionText}>
+                <Text
+                  variant="titleMedium"
+                  style={{ color: '#1a1a1a', fontWeight: 'bold' }}
+                >
+                  My Orders
+                </Text>
+                <Text variant="bodySmall" style={{ color: '#666' }}>
+                  Reorder/Return
+                </Text>
+              </View>
+              <Appbar.Action icon="chevron-right" color="#ccc" />
             </View>
-          </Card.Content>
-        </Card>
+          </Card>
+        </View>
       </ScrollView>
 
       <View style={styles.bottomNav}>
@@ -332,7 +353,7 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#fff',
   },
   loadingContainer: {
     flex: 1,
@@ -348,14 +369,27 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   searchContainer: {
-    padding: 10,
+    padding: 16,
+    backgroundColor: '#fff',
   },
   searchBar: {
-    borderRadius: 10,
+    borderRadius: 28,
+    elevation: 2,
+    backgroundColor: '#f8f9fa',
+    height: 48,
   },
   bannerContainer: {
-    height: 200,
-    marginBottom: 10,
+    height: 180,
+    marginHorizontal: 16,
+    marginBottom: 16,
+    borderRadius: 16,
+    overflow: 'hidden',
+    elevation: 4,
+    backgroundColor: '#fff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   bannerImage: {
     width: '100%',
@@ -363,63 +397,94 @@ const styles = StyleSheet.create({
   },
   indicators: {
     position: 'absolute',
-    bottom: 10,
+    bottom: 12,
     left: 0,
     right: 0,
     flexDirection: 'row',
     justifyContent: 'center',
   },
   indicator: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#ccc',
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: 'rgba(255, 255, 255, 0.5)',
     marginHorizontal: 4,
   },
   activeIndicator: {
-    backgroundColor: '#b90617',
+    width: 16,
+    backgroundColor: '#fff',
   },
-  sectionCard: {
-    margin: 10,
-    marginBottom: 5,
+  sectionTitleContainer: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 4,
   },
   sectionTitle: {
     fontWeight: 'bold',
+    color: '#1a1a1a',
+    letterSpacing: 0.5,
   },
   categoriesContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    padding: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
     justifyContent: 'space-between',
   },
   categoryCard: {
-    width: width / 2 - 20,
-    marginBottom: 15,
+    width: (width - 40) / 3,
+    marginVertical: 8,
+    alignItems: 'center',
+  },
+  categoryImageContainer: {
+    width: '100%',
+    aspectRatio: 1,
+    borderRadius: 16,
+    backgroundColor: '#f8f9fa',
+    elevation: 2,
+    padding: 8,
+    marginBottom: 8,
+    justifyContent: 'center',
     alignItems: 'center',
   },
   categoryImage: {
     width: '100%',
-    height: 100,
-    borderRadius: 8,
+    height: '100%',
+    borderRadius: 12,
   },
   categoryName: {
-    marginTop: 8,
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#4caf50',
+    fontSize: 12,
+    fontWeight: '600',
+    textAlign: 'center',
+    color: '#1a1a1a',
+  },
+  optionsGrid: {
+    padding: 16,
+    gap: 12,
   },
   optionCard: {
-    margin: 10,
-    marginBottom: 5,
+    borderRadius: 16,
+    backgroundColor: '#fff',
+    elevation: 2,
+    marginBottom: 4,
   },
   optionContent: {
     flexDirection: 'row',
     alignItems: 'center',
+    padding: 8,
+  },
+  optionIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: '#e8f5e9',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
   },
   optionIcon: {
-    width: 40,
-    height: 40,
-    marginRight: 15,
+    width: 28,
+    height: 28,
   },
   optionText: {
     flex: 1,
@@ -429,20 +494,27 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
     backgroundColor: '#fff',
     borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
+    borderTopColor: '#f0f0f0',
+    paddingBottom: 8,
+    height: 60,
   },
   navItem: {
     flex: 1,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   cartButton: {
     position: 'relative',
+    marginRight: 8,
   },
   badge: {
     position: 'absolute',
-    top: 5,
-    right: 5,
+    top: 4,
+    right: 4,
     backgroundColor: '#4caf50',
+    fontSize: 10,
+    height: 18,
+    minWidth: 18,
   },
 });
 

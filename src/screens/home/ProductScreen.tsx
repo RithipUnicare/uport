@@ -155,18 +155,17 @@ const ProductScreen: React.FC<Props> = ({ navigation, route }) => {
 
             return (
               <Card key={productIndex} style={styles.productCard}>
-                <Card.Content>
+                <View style={styles.productImageContainer}>
                   <Image
                     source={{
                       uri: ApiService.getImageUrl(product.pro_image),
                     }}
                     style={styles.productImage}
-                    onError={e =>
-                      console.log('IMAGE ERROR:', e.nativeEvent.error)
-                    }
-                    onLoad={() => console.log('IMAGE LOADED')}
+                    resizeMode="contain"
                   />
+                </View>
 
+                <View style={styles.productDetails}>
                   <Text variant="titleMedium" style={styles.productName}>
                     {product.eng_name}
                   </Text>
@@ -209,6 +208,13 @@ const ProductScreen: React.FC<Props> = ({ navigation, route }) => {
                                 }))
                               }
                               style={styles.variantChip}
+                              showSelectedOverlay
+                              textStyle={{
+                                color:
+                                  selectedVariantIndex === variantIndex
+                                    ? theme.colors.primary
+                                    : '#666',
+                              }}
                             >
                               {variant.product_size}
                             </Chip>
@@ -216,44 +222,47 @@ const ProductScreen: React.FC<Props> = ({ navigation, route }) => {
                         )}
                       </View>
 
-                      {selectedVariant.available_stock > 0 ? (
-                        selectedVariant.quantity > 0 ? (
-                          <View style={styles.quantityContainer}>
-                            <TouchableOpacity
-                              style={styles.quantityButton}
-                              onPress={() =>
-                                updateQuantity(selectedVariant.id, -1)
-                              }
+                      <View style={styles.actionContainer}>
+                        {selectedVariant.available_stock > 0 ? (
+                          selectedVariant.quantity > 0 ? (
+                            <View style={styles.quantityContainer}>
+                              <TouchableOpacity
+                                style={styles.quantityButton}
+                                onPress={() =>
+                                  updateQuantity(selectedVariant.id, -1)
+                                }
+                              >
+                                <Text style={styles.quantityButtonText}>−</Text>
+                              </TouchableOpacity>
+                              <Text style={styles.quantity}>
+                                {selectedVariant.quantity}
+                              </Text>
+                              <TouchableOpacity
+                                style={styles.quantityButton}
+                                onPress={() =>
+                                  updateQuantity(selectedVariant.id, 1)
+                                }
+                              >
+                                <Text style={styles.quantityButtonText}>+</Text>
+                              </TouchableOpacity>
+                            </View>
+                          ) : (
+                            <Button
+                              mode="contained"
+                              onPress={() => addToCart(selectedVariant.id)}
+                              style={styles.addButton}
+                              labelStyle={{ fontWeight: 'bold' }}
                             >
-                              <Text style={styles.quantityButtonText}>-</Text>
-                            </TouchableOpacity>
-                            <Text style={styles.quantity}>
-                              {selectedVariant.quantity}
-                            </Text>
-                            <TouchableOpacity
-                              style={styles.quantityButton}
-                              onPress={() =>
-                                updateQuantity(selectedVariant.id, 1)
-                              }
-                            >
-                              <Text style={styles.quantityButtonText}>+</Text>
-                            </TouchableOpacity>
-                          </View>
+                              Add to Cart
+                            </Button>
+                          )
                         ) : (
-                          <Button
-                            mode="contained"
-                            onPress={() => addToCart(selectedVariant.id)}
-                            style={styles.addButton}
-                          >
-                            ADD
-                          </Button>
-                        )
-                      ) : (
-                        <Text style={styles.outOfStock}>Out Of Stock</Text>
-                      )}
+                          <Text style={styles.outOfStock}>Out of Stock</Text>
+                        )}
+                      </View>
                     </>
                   )}
-                </Card.Content>
+                </View>
               </Card>
             );
           })}
@@ -272,7 +281,7 @@ const ProductScreen: React.FC<Props> = ({ navigation, route }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#fff',
   },
   loadingContainer: {
     flex: 1,
@@ -281,97 +290,142 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+    padding: 16,
   },
   productCard: {
-    margin: 10,
-    marginBottom: 5,
+    marginBottom: 20,
+    borderRadius: 16,
+    backgroundColor: '#fff',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    overflow: 'hidden',
+  },
+  productImageContainer: {
+    width: '100%',
+    height: 220,
+    backgroundColor: '#f8f9fa',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 16,
   },
   productImage: {
     width: '100%',
-    height: 200,
-    borderRadius: 8,
-    marginBottom: 15,
+    height: '100%',
+  },
+  productDetails: {
+    padding: 16,
   },
   productName: {
-    fontWeight: 'bold',
-    marginBottom: 10,
+    fontWeight: '700',
+    color: '#1a1a1a',
+    fontSize: 18,
+    lineHeight: 24,
+    marginBottom: 8,
   },
   priceContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 5,
+    alignItems: 'baseline',
+    marginBottom: 4,
   },
   price: {
-    fontWeight: 'bold',
-    color: '#000',
+    fontWeight: '800',
+    color: '#1a1a1a',
+    fontSize: 22,
     marginRight: 10,
   },
   oldPrice: {
     textDecorationLine: 'line-through',
     color: '#999',
+    fontSize: 14,
     marginRight: 10,
   },
   offer: {
     color: '#4caf50',
-    fontWeight: 'bold',
+    fontWeight: '700',
+    fontSize: 14,
   },
   gst: {
-    fontSize: 12,
-    color: '#666',
-    marginVertical: 2,
+    fontSize: 11,
+    color: '#757575',
+    marginVertical: 1,
+    fontWeight: '500',
   },
   variantsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    marginVertical: 10,
+    marginTop: 16,
+    gap: 8,
   },
   variantChip: {
-    marginRight: 8,
-    marginBottom: 8,
+    borderRadius: 8,
+    backgroundColor: '#f5f5f5',
+  },
+  actionContainer: {
+    marginTop: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   addButton: {
-    marginTop: 10,
+    borderRadius: 12,
+    flex: 1,
+    height: 44,
+    justifyContent: 'center',
   },
   quantityContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#BEBEBE',
-    borderRadius: 15,
-    alignSelf: 'flex-start',
-    marginTop: 10,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 12,
+    paddingHorizontal: 4,
   },
   quantityButton: {
-    padding: 10,
-    paddingHorizontal: 15,
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   quantityButtonText: {
     fontSize: 20,
-    fontWeight: 'bold',
+    fontWeight: '600',
+    color: '#1a1a1a',
   },
   quantity: {
-    paddingHorizontal: 15,
+    paddingHorizontal: 16,
     fontSize: 16,
-    color: '#0A70A4',
+    fontWeight: '700',
+    color: '#b90617',
   },
   outOfStock: {
-    color: '#f00',
-    fontWeight: 'bold',
-    marginTop: 10,
+    color: '#d32f2f',
+    fontWeight: '700',
+    marginTop: 12,
+    fontSize: 14,
+    backgroundColor: '#ffebee',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+    alignSelf: 'flex-start',
   },
   emptyContainer: {
-    padding: 20,
+    paddingVertical: 60,
     alignItems: 'center',
   },
   cartButton: {
     position: 'relative',
+    marginRight: 8,
   },
   badge: {
     position: 'absolute',
-    top: 5,
-    right: 5,
+    top: 4,
+    right: 4,
     backgroundColor: '#4caf50',
+    fontSize: 10,
+    height: 18,
+    minWidth: 18,
   },
 });
 

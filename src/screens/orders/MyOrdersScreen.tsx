@@ -145,14 +145,16 @@ const MyOrdersScreen: React.FC<Props> = ({ navigation }) => {
                       #{order.order_no}
                     </Text>
                     <Text variant="bodySmall" style={styles.orderDate}>
+                      Ordered on{' '}
                       {new Date(order.created_on).toLocaleDateString()}
                     </Text>
                   </View>
                   <Chip
-                    style={{
-                      backgroundColor: getStatusColor(order.order_status),
-                    }}
-                    textStyle={{ color: '#fff' }}
+                    style={[
+                      styles.statusChip,
+                      { backgroundColor: getStatusColor(order.order_status) },
+                    ]}
+                    textStyle={styles.statusChipText}
                   >
                     {getStatusLabel(order.order_status)}
                   </Chip>
@@ -160,20 +162,20 @@ const MyOrdersScreen: React.FC<Props> = ({ navigation }) => {
 
                 <View style={styles.orderDetails}>
                   <View style={styles.detailRow}>
-                    <Text variant="bodyMedium">Items:</Text>
-                    <Text variant="bodyMedium" style={styles.detailValue}>
+                    <Text style={styles.detailLabel}>Total Items</Text>
+                    <Text style={styles.detailValue}>
                       {order.order_details?.length || 0}
                     </Text>
                   </View>
                   <View style={styles.detailRow}>
-                    <Text variant="bodyMedium">Delivery:</Text>
-                    <Text variant="bodyMedium" style={styles.detailValue}>
+                    <Text style={styles.detailLabel}>Delivery Charge</Text>
+                    <Text style={styles.detailValue}>
                       ₹{parseFloat(order.delivery_charge).toFixed(2)}
                     </Text>
                   </View>
                   <View style={[styles.detailRow, styles.totalRow]}>
-                    <Text variant="titleMedium">Total:</Text>
-                    <Text variant="titleMedium" style={styles.totalAmount}>
+                    <Text style={styles.totalLabel}>Grand Total</Text>
+                    <Text style={styles.totalAmount}>
                       ₹{parseFloat(order.total_amount).toFixed(2)}
                     </Text>
                   </View>
@@ -196,29 +198,33 @@ const MyOrdersScreen: React.FC<Props> = ({ navigation }) => {
               {selectedOrder && (
                 <>
                   <View style={styles.dialogHeader}>
-                    <Text variant="titleMedium">
+                    <Text variant="titleMedium" style={styles.orderNumber}>
                       Order #{selectedOrder.order_no}
                     </Text>
                     <Chip
-                      style={{
-                        backgroundColor: getStatusColor(
-                          selectedOrder.order_status,
-                        ),
-                      }}
-                      textStyle={{ color: '#fff', fontSize: 12 }}
+                      style={[
+                        styles.statusChip,
+                        {
+                          backgroundColor: getStatusColor(
+                            selectedOrder.order_status,
+                          ),
+                        },
+                      ]}
+                      textStyle={styles.statusChipText}
                     >
                       {getStatusLabel(selectedOrder.order_status)}
                     </Chip>
                   </View>
 
                   <Text variant="bodySmall" style={styles.dialogDate}>
+                    Ordered on{' '}
                     {new Date(selectedOrder.created_on).toLocaleDateString()}
                   </Text>
 
                   <Divider style={styles.divider} />
 
                   <Text variant="titleSmall" style={styles.sectionTitle}>
-                    Products:
+                    Items Ordered
                   </Text>
 
                   {selectedOrder.order_details.map((item, index) => (
@@ -227,28 +233,35 @@ const MyOrdersScreen: React.FC<Props> = ({ navigation }) => {
                         <Text variant="titleSmall" style={styles.productName}>
                           {item.product_name}
                         </Text>
-                        <View style={styles.productDetails}>
-                          <Text variant="bodySmall">
-                            Quantity: {item.quantity}
+                        <View style={styles.productDetailsContainer}>
+                          <Text style={styles.productDetailText}>
+                            Quantity:{' '}
+                            <Text style={styles.productDetailBold}>
+                              {item.quantity}
+                            </Text>
                           </Text>
-                          <Text variant="bodySmall">
-                            Price: ₹{parseFloat(item.product_amount).toFixed(2)}
+                          <Text style={styles.productDetailText}>
+                            Price:{' '}
+                            <Text style={styles.productDetailBold}>
+                              ₹{parseFloat(item.product_amount).toFixed(2)}
+                            </Text>
                           </Text>
                         </View>
-                        <View style={styles.productDetails}>
+                        <View style={styles.productDetailsContainer}>
                           <Text
-                            variant="bodySmall"
-                            style={{ color: '#4CAF50' }}
+                            style={[
+                              styles.productDetailText,
+                              { color: '#4CAF50' },
+                            ]}
                           >
                             Discount: ₹
                             {parseFloat(item.discount_amount).toFixed(2)}
                           </Text>
-                          <Text
-                            variant="bodySmall"
-                            style={{ fontWeight: 'bold' }}
-                          >
-                            Total: ₹
-                            {parseFloat(item.sale_tot_amount).toFixed(2)}
+                          <Text style={styles.productDetailText}>
+                            Total:{' '}
+                            <Text style={styles.productDetailBold}>
+                              ₹{parseFloat(item.sale_tot_amount).toFixed(2)}
+                            </Text>
                           </Text>
                         </View>
                       </Card.Content>
@@ -259,14 +272,14 @@ const MyOrdersScreen: React.FC<Props> = ({ navigation }) => {
 
                   <View style={styles.dialogSummary}>
                     <View style={styles.summaryRow}>
-                      <Text variant="bodyMedium">Delivery Charge:</Text>
-                      <Text variant="bodyMedium">
+                      <Text style={styles.detailLabel}>Delivery Charge</Text>
+                      <Text style={styles.detailValue}>
                         ₹{parseFloat(selectedOrder.delivery_charge).toFixed(2)}
                       </Text>
                     </View>
                     <View style={[styles.summaryRow, styles.totalRow]}>
-                      <Text variant="titleMedium">Total Amount:</Text>
-                      <Text variant="titleMedium" style={styles.totalAmount}>
+                      <Text style={styles.totalLabel}>Total Amount Paid</Text>
+                      <Text style={styles.totalAmount}>
                         ₹{parseFloat(selectedOrder.total_amount).toFixed(2)}
                       </Text>
                     </View>
@@ -285,7 +298,10 @@ const MyOrdersScreen: React.FC<Props> = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f5f5f5' },
+  container: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -293,98 +309,165 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+    padding: 16,
   },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: 32,
   },
-  emptyText: { fontWeight: 'bold', marginBottom: 10 },
-  subtitle: { color: '#666', textAlign: 'center' },
+  emptyText: {
+    fontWeight: '800',
+    marginBottom: 8,
+    color: '#1a1a1a',
+    fontSize: 20,
+  },
+  subtitle: {
+    color: '#666',
+    textAlign: 'center',
+    lineHeight: 20,
+  },
   orderCard: {
-    margin: 10,
-    marginBottom: 5,
+    marginBottom: 16,
+    borderRadius: 16,
+    backgroundColor: '#fff',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
   },
   orderHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 15,
+    marginBottom: 16,
   },
   orderNumber: {
-    fontWeight: 'bold',
-    marginBottom: 5,
+    fontWeight: '800',
+    color: '#1a1a1a',
+    fontSize: 18,
+    letterSpacing: 0.5,
   },
   orderDate: {
     color: '#666',
+    fontSize: 13,
+    marginTop: 2,
+  },
+  statusChip: {
+    height: 28,
+    borderRadius: 8,
+  },
+  statusChipText: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '700',
+    paddingHorizontal: 4,
   },
   orderDetails: {
     borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
-    paddingTop: 10,
+    borderTopColor: '#f0f0f0',
+    paddingTop: 12,
   },
   detailRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 5,
+    paddingVertical: 4,
+  },
+  detailLabel: {
+    color: '#666',
+    fontSize: 14,
   },
   detailValue: {
-    fontWeight: '500',
+    fontWeight: '600',
+    color: '#1a1a1a',
+    fontSize: 14,
   },
   totalRow: {
     borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
-    marginTop: 5,
-    paddingTop: 10,
+    borderTopColor: '#f0f0f0',
+    marginTop: 8,
+    paddingTop: 8,
+  },
+  totalLabel: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#1a1a1a',
   },
   totalAmount: {
-    fontWeight: 'bold',
+    fontWeight: '800',
     color: '#b90617',
+    fontSize: 16,
   },
   dialog: {
-    maxHeight: '80%',
+    borderRadius: 24,
+    backgroundColor: '#fff',
+    maxHeight: '85%',
   },
   dialogContent: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
+    paddingBottom: 24,
   },
   dialogHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 5,
+    marginBottom: 4,
   },
   dialogDate: {
     color: '#666',
-    marginBottom: 15,
+    fontSize: 13,
+    marginBottom: 16,
   },
   divider: {
-    marginVertical: 15,
+    marginVertical: 16,
+    backgroundColor: '#f0f0f0',
   },
   sectionTitle: {
-    fontWeight: 'bold',
-    marginBottom: 10,
+    fontWeight: '800',
+    marginBottom: 12,
+    color: '#1a1a1a',
+    letterSpacing: 0.3,
   },
   productCard: {
-    marginBottom: 10,
-    backgroundColor: '#f9f9f9',
+    marginBottom: 12,
+    borderRadius: 12,
+    backgroundColor: '#f8f9fa',
+    elevation: 0,
+    borderWidth: 1,
+    borderColor: '#eee',
   },
   productName: {
-    fontWeight: 'bold',
+    fontWeight: '700',
+    color: '#1a1a1a',
+    fontSize: 15,
+    lineHeight: 20,
     marginBottom: 8,
   },
-  productDetails: {
+  productDetailsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginTop: 4,
   },
+  productDetailText: {
+    fontSize: 13,
+    color: '#666',
+  },
+  productDetailBold: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#1a1a1a',
+  },
   dialogSummary: {
-    marginTop: 10,
+    backgroundColor: '#f8f9fa',
+    padding: 16,
+    borderRadius: 12,
   },
   summaryRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 5,
+    paddingVertical: 4,
   },
 });
 

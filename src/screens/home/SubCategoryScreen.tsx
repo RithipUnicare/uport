@@ -101,7 +101,7 @@ const SubCategoryScreen: React.FC<Props> = ({ navigation, route }) => {
               }
             >
               <Card style={styles.subcategoryCard}>
-                <Card.Content style={styles.cardContent}>
+                <View style={styles.cardContent}>
                   <View style={styles.textContainer}>
                     <Text variant="titleMedium" style={styles.title}>
                       {subcategory.name}
@@ -110,13 +110,16 @@ const SubCategoryScreen: React.FC<Props> = ({ navigation, route }) => {
                       {subcategory.short_desc || 'Best offer applicable'}
                     </Text>
                   </View>
-                  <Image
-                    source={{
-                      uri: subcategory.image,
-                    }}
-                    style={styles.image}
-                  />
-                </Card.Content>
+                  <View style={styles.imageContainer}>
+                    <Image
+                      source={{
+                        uri: subcategory.image,
+                      }}
+                      style={styles.image}
+                      resizeMode="contain"
+                    />
+                  </View>
+                </View>
               </Card>
             </TouchableOpacity>
           ))}
@@ -135,13 +138,17 @@ const SubCategoryScreen: React.FC<Props> = ({ navigation, route }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#fff',
   },
   searchContainer: {
-    padding: 10,
+    padding: 16,
+    backgroundColor: '#fff',
   },
   searchBar: {
-    borderRadius: 10,
+    borderRadius: 28,
+    elevation: 2,
+    backgroundColor: '#f8f9fa',
+    height: 48,
   },
   loadingContainer: {
     flex: 1,
@@ -150,45 +157,68 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+    paddingHorizontal: 16,
   },
   subcategoryCard: {
-    margin: 10,
-    marginBottom: 5,
+    marginBottom: 16,
+    borderRadius: 16,
+    backgroundColor: '#fff',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
   },
   cardContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    minHeight: 100,
+    padding: 12,
   },
   textContainer: {
     flex: 1,
+    paddingRight: 12,
   },
   title: {
-    fontWeight: 'bold',
-    color: '#000',
+    fontWeight: '700',
+    color: '#1a1a1a',
+    fontSize: 16,
   },
   description: {
     color: '#4caf50',
-    marginTop: 5,
+    marginTop: 4,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  imageContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 12,
+    backgroundColor: '#f8f9fa',
+    overflow: 'hidden',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   image: {
-    width: 75,
-    height: 75,
-    borderRadius: 8,
+    width: '100%',
+    height: '100%',
   },
   emptyContainer: {
-    padding: 20,
+    padding: 40,
     alignItems: 'center',
   },
   cartButton: {
     position: 'relative',
+    marginRight: 8,
   },
   badge: {
     position: 'absolute',
-    top: 5,
-    right: 5,
+    top: 4,
+    right: 4,
     backgroundColor: '#4caf50',
+    fontSize: 10,
+    height: 18,
+    minWidth: 18,
   },
 });
 

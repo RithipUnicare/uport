@@ -1,5 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, ScrollView } from 'react-native';
+import {
+  View,
+  StyleSheet,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   Appbar,
@@ -51,79 +57,84 @@ const ProfileScreen: React.FC<Props> = ({ navigation }) => {
       edges={['top', 'left', 'right', 'bottom']}
     >
       <Appbar.Header style={{ backgroundColor: theme.colors.primary }}>
-        <Appbar.BackAction onPress={() => navigation.goBack()} />
-        <Appbar.Content title="My Account" />
+        <Appbar.BackAction onPress={() => navigation.goBack()} color="#fff" />
+        <Appbar.Content title="My Account" color="#fff" />
       </Appbar.Header>
 
-      <ScrollView>
-        <View style={styles.header}>
-          <View
-            style={[styles.avatar, { backgroundColor: theme.colors.primary }]}
-          >
-            <Text style={styles.avatarText}>
-              {userName.charAt(0).toUpperCase()}
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <ScrollView>
+          <View style={styles.header}>
+            <View
+              style={[styles.avatar, { backgroundColor: theme.colors.primary }]}
+            >
+              <Text style={styles.avatarText}>
+                {userName.charAt(0).toUpperCase()}
+              </Text>
+            </View>
+            <Text variant="titleLarge" style={styles.name}>
+              {userName}
+            </Text>
+            <Text variant="bodyMedium" style={styles.userType}>
+              {userType}
             </Text>
           </View>
-          <Text variant="titleLarge" style={styles.name}>
-            {userName}
-          </Text>
-          <Text variant="bodyMedium" style={styles.userType}>
-            {userType}
-          </Text>
-        </View>
 
-        <Divider />
+          <Divider />
 
-        <List.Section>
-          <List.Item
-            title="My Orders"
-            left={props => <List.Icon {...props} icon="shopping" />}
-            onPress={() => navigation.navigate('MyOrders')}
-            right={props => <List.Icon {...props} icon="chevron-right" />}
-          />
-          <List.Item
-            title="Change Password"
-            left={props => <List.Icon {...props} icon="lock" />}
-            onPress={() => navigation.navigate('ChangePassword')}
-            right={props => <List.Icon {...props} icon="chevron-right" />}
-          />
-          <List.Item
-            title="Settings"
-            left={props => <List.Icon {...props} icon="cog" />}
-            onPress={() => navigation.navigate('Settings')}
-            right={props => <List.Icon {...props} icon="chevron-right" />}
-          />
-          <List.Item
-            title="Contact Us"
-            left={props => <List.Icon {...props} icon="phone" />}
-            onPress={() => navigation.navigate('ContactUs')}
-            right={props => <List.Icon {...props} icon="chevron-right" />}
-          />
-          <List.Item
-            title="Terms & Conditions"
-            left={props => <List.Icon {...props} icon="file-document" />}
-            onPress={() => navigation.navigate('TermsAndConditions')}
-            right={props => <List.Icon {...props} icon="chevron-right" />}
-          />
-          <List.Item
-            title="Privacy Policy"
-            left={props => <List.Icon {...props} icon="shield-check" />}
-            onPress={() => navigation.navigate('PrivacyPolicy')}
-            right={props => <List.Icon {...props} icon="chevron-right" />}
-          />
-        </List.Section>
+          <List.Section>
+            <List.Item
+              title="My Orders"
+              left={props => <List.Icon {...props} icon="shopping" />}
+              onPress={() => navigation.navigate('MyOrders')}
+              right={props => <List.Icon {...props} icon="chevron-right" />}
+            />
+            <List.Item
+              title="Change Password"
+              left={props => <List.Icon {...props} icon="lock" />}
+              onPress={() => navigation.navigate('ChangePassword')}
+              right={props => <List.Icon {...props} icon="chevron-right" />}
+            />
+            <List.Item
+              title="Settings"
+              left={props => <List.Icon {...props} icon="cog" />}
+              onPress={() => navigation.navigate('Settings')}
+              right={props => <List.Icon {...props} icon="chevron-right" />}
+            />
+            <List.Item
+              title="Contact Us"
+              left={props => <List.Icon {...props} icon="phone" />}
+              onPress={() => navigation.navigate('ContactUs')}
+              right={props => <List.Icon {...props} icon="chevron-right" />}
+            />
+            <List.Item
+              title="Terms & Conditions"
+              left={props => <List.Icon {...props} icon="file-document" />}
+              onPress={() => navigation.navigate('TermsAndConditions')}
+              right={props => <List.Icon {...props} icon="chevron-right" />}
+            />
+            <List.Item
+              title="Privacy Policy"
+              left={props => <List.Icon {...props} icon="shield-check" />}
+              onPress={() => navigation.navigate('PrivacyPolicy')}
+              right={props => <List.Icon {...props} icon="chevron-right" />}
+            />
+          </List.Section>
 
-        <View style={styles.buttonContainer}>
-          <Button
-            mode="contained"
-            onPress={handleLogout}
-            style={styles.logoutButton}
-            buttonColor={theme.colors.error}
-          >
-            Logout
-          </Button>
-        </View>
-      </ScrollView>
+          <View style={styles.buttonContainer}>
+            <Button
+              mode="contained"
+              onPress={handleLogout}
+              style={styles.logoutButton}
+              buttonColor={theme.colors.error}
+            >
+              Logout
+            </Button>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };

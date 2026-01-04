@@ -5,6 +5,8 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
@@ -220,120 +222,136 @@ const CartScreen: React.FC<Props> = ({ navigation }) => {
         </View>
       ) : (
         <>
-          <ScrollView style={styles.content}>
-            {cartItems.map(item => (
-              <Card key={item.product_id} style={styles.cartItem}>
-                <Card.Content>
-                  <View style={styles.itemHeader}>
-                    <Text variant="titleMedium" style={styles.itemName}>
-                      {item.product_name}
-                    </Text>
-                    <TouchableOpacity
-                      onPress={() => removeItem(item.product_id, 0)}
-                      style={styles.deleteButton}
-                    >
-                      <MaterialCommunityIcons
-                        name="delete"
-                        size={24}
-                        color="#f44336"
-                      />
-                    </TouchableOpacity>
-                  </View>
-
-                  <View style={styles.itemDetails}>
-                    <View style={styles.priceContainer}>
-                      <Text variant="titleMedium" style={styles.price}>
-                        ₹{item.sales_price}
+          <KeyboardAvoidingView
+            style={{ flex: 1 }}
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
+          >
+            <ScrollView style={styles.content}>
+              {cartItems.map(item => (
+                <Card key={item.product_id} style={styles.cartItem}>
+                  <Card.Content>
+                    <View style={styles.itemHeader}>
+                      <Text
+                        variant="titleMedium"
+                        style={styles.itemName}
+                        numberOfLines={2}
+                      >
+                        {item.product_name}
                       </Text>
-                      <Text style={styles.oldPrice}>₹{item.regular_price}</Text>
-                      <Text style={styles.size}>{item.product_size}</Text>
+                      <TouchableOpacity
+                        onPress={() => removeItem(item.product_id, 0)}
+                        style={styles.deleteButton}
+                      >
+                        <MaterialCommunityIcons
+                          name="delete-outline"
+                          size={22}
+                          color="#f44336"
+                        />
+                      </TouchableOpacity>
                     </View>
 
-                    <View style={styles.quantityContainer}>
-                      <TouchableOpacity
-                        style={styles.quantityButton}
-                        onPress={() =>
-                          updateQuantity(
-                            item.product_id,
-                            Number(item.quantity) - 1,
-                          )
-                        }
-                      >
-                        <Text style={styles.quantityButtonText}>-</Text>
-                      </TouchableOpacity>
-                      <TextInput
-                        style={[
-                          styles.quantityInput,
-                          { backgroundColor: '#f3ececff' },
-                        ]}
-                        value={item.quantity.toString()}
-                        keyboardType="numeric"
-                        onChangeText={text => {
-                          const qty = parseInt(text) || 0;
-                          // if (qty !== item.quantity) {
-                          //   const diff = qty - item.quantity;
-                          //   updateQuantity(item.product_id, diff);
-                          // }
-                          updateQuantity(item.product_id, qty);
-                        }}
-                      />
-                      <TouchableOpacity
-                        style={styles.quantityButton}
-                        onPress={() =>
-                          updateQuantity(
-                            item.product_id,
-                            Number(item.quantity) + 1,
-                          )
-                        }
-                      >
-                        <Text style={styles.quantityButtonText}>+</Text>
-                      </TouchableOpacity>
+                    <View style={styles.itemDetails}>
+                      <View style={styles.priceContainer}>
+                        <Text variant="titleMedium" style={styles.price}>
+                          ₹{item.sales_price}
+                        </Text>
+                        <Text style={styles.oldPrice}>
+                          ₹{item.regular_price}
+                        </Text>
+                        <Text style={styles.size}>{item.product_size}</Text>
+                      </View>
+
+                      <View style={styles.quantityContainer}>
+                        <TouchableOpacity
+                          style={styles.quantityButton}
+                          onPress={() => updateQuantity(item.product_id, -1)}
+                        >
+                          <Text style={styles.quantityButtonText}>−</Text>
+                        </TouchableOpacity>
+                        <TextInput
+                          style={styles.quantityInput}
+                          value={item.quantity.toString()}
+                          keyboardType="numeric"
+                          onChangeText={text => {
+                            const qty = parseInt(text) || 0;
+                            if (qty > 0) {
+                              const diff = qty - item.quantity;
+                              if (diff !== 0) {
+                                updateQuantity(item.product_id, diff);
+                              }
+                            }
+                          }}
+                        />
+                        <TouchableOpacity
+                          style={styles.quantityButton}
+                          onPress={() => updateQuantity(item.product_id, 1)}
+                        >
+                          <Text style={styles.quantityButtonText}>+</Text>
+                        </TouchableOpacity>
+                      </View>
                     </View>
+                  </Card.Content>
+                </Card>
+              ))}
+
+              <Card style={styles.priceCard}>
+                <Card.Content>
+                  <Text variant="titleMedium" style={styles.priceTitle}>
+                    Price Details
+                  </Text>
+                  <View style={styles.priceLine}>
+                    <Text style={styles.priceLabel}>
+                      Price ({cartItems.length} items)
+                    </Text>
+                    <Text style={styles.priceValue}>
+                      ₹{subtotal.toFixed(2)}
+                    </Text>
+                  </View>
+                  <View style={styles.priceLine}>
+                    <Text style={styles.priceLabel}>Delivery Charges</Text>
+                    <Text
+                      style={[
+                        styles.priceValue,
+                        { color: deliveryCharge === 0 ? '#4caf50' : '#1a1a1a' },
+                      ]}
+                    >
+                      {deliveryCharge === 0
+                        ? 'FREE'
+                        : `₹${deliveryCharge.toFixed(2)}`}
+                    </Text>
+                  </View>
+                  <View style={[styles.priceLine, styles.totalLine]}>
+                    <Text style={styles.totalLabel}>Total Amount</Text>
+                    <Text style={styles.totalValue}>
+                      ₹{calculateTotal().toFixed(2)}
+                    </Text>
                   </View>
                 </Card.Content>
               </Card>
-            ))}
-
-            <Card style={styles.priceCard}>
-              <Card.Content>
-                <Text variant="titleMedium" style={styles.priceTitle}>
-                  PRICE DETAILS
-                </Text>
-                <View style={styles.priceLine}>
-                  <Text>Price</Text>
-                  <Text>₹{subtotal.toFixed(2)}</Text>
-                </View>
-                <View style={styles.priceLine}>
-                  <Text>Delivery</Text>
-                  <Text>₹{deliveryCharge.toFixed(2)}</Text>
-                </View>
-                <View style={[styles.priceLine, styles.totalLine]}>
-                  <Text variant="titleMedium">Amount Payable</Text>
-                  <Text variant="titleMedium">
-                    ₹{calculateTotal().toFixed(2)}
-                  </Text>
-                </View>
-              </Card.Content>
-            </Card>
-          </ScrollView>
+            </ScrollView>
+          </KeyboardAvoidingView>
 
           <View style={styles.footer}>
-            <View style={styles.totalContainer}>
-              <Text variant="titleMedium">Total</Text>
-              <Text variant="titleLarge" style={styles.totalAmount}>
-                ₹{calculateTotal().toFixed(2)}
-              </Text>
+            <View style={styles.footerTotalContainer}>
+              <View>
+                <Text style={styles.footerTotalLabel}>Total Payable</Text>
+                <Text style={styles.footerTotalAmount}>
+                  ₹{calculateTotal().toFixed(2)}
+                </Text>
+              </View>
             </View>
             <Button
               mode="contained"
               onPress={handleCheckout}
               style={styles.checkoutButton}
+              labelStyle={styles.checkoutButtonLabel}
               loading={loading}
               disabled={loading || subtotal < minimumOrder}
             >
               {subtotal < minimumOrder
-                ? `Minimum Order: ₹${minimumOrder}`
-                : 'Proceed to Checkout'}
+                ? `Add ₹${(minimumOrder - subtotal).toFixed(0)} more`
+                : 'Place Order'}
             </Button>
           </View>
         </>
@@ -345,10 +363,11 @@ const CartScreen: React.FC<Props> = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#fff',
   },
   content: {
     flex: 1,
+    padding: 16,
   },
   emptyContainer: {
     flex: 1,
@@ -357,112 +376,166 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   shopButton: {
-    marginTop: 20,
+    marginTop: 24,
+    borderRadius: 12,
+    paddingHorizontal: 24,
   },
   cartItem: {
-    margin: 10,
-    marginBottom: 5,
+    marginBottom: 16,
+    borderRadius: 16,
+    backgroundColor: '#fff',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
   },
   itemHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
+    alignItems: 'flex-start',
+    marginBottom: 12,
   },
   itemName: {
     flex: 1,
-    fontWeight: 'bold',
-  },
-  removeButton: {
-    fontSize: 24,
+    fontWeight: '700',
+    color: '#1a1a1a',
+    fontSize: 16,
   },
   deleteButton: {
     padding: 4,
+    marginLeft: 8,
   },
   itemDetails: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-end',
   },
   priceContainer: {
     flex: 1,
   },
   price: {
-    fontWeight: 'bold',
-    color: '#000',
+    fontWeight: '800',
+    color: '#1a1a1a',
+    fontSize: 18,
   },
   oldPrice: {
     textDecorationLine: 'line-through',
     color: '#999',
     fontSize: 12,
+    marginTop: 2,
   },
   size: {
     fontSize: 12,
-    color: '#666',
-    marginTop: 5,
+    color: '#757575',
+    marginTop: 4,
+    fontWeight: '600',
   },
   quantityContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#BEBEBE',
-    borderRadius: 15,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 12,
+    paddingHorizontal: 4,
+    height: 40,
   },
   quantityButton: {
-    padding: 10,
-    paddingHorizontal: 15,
+    width: 32,
+    height: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   quantityButtonText: {
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  quantity: {
-    paddingHorizontal: 15,
-    fontSize: 16,
-    color: '#0A70A4',
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1a1a1a',
   },
   quantityInput: {
-    paddingHorizontal: 15,
     fontSize: 16,
-    color: '#0A70A4',
-    minWidth: 50,
+    color: '#b90617',
+    fontWeight: '700',
+    minWidth: 40,
     textAlign: 'center',
+    padding: 0,
   },
   priceCard: {
-    margin: 10,
+    marginTop: 8,
+    marginBottom: 32,
+    borderRadius: 16,
+    backgroundColor: '#f8f9fa',
+    elevation: 0,
+    borderWidth: 1,
+    borderColor: '#eee',
   },
   priceTitle: {
-    fontWeight: 'bold',
-    marginBottom: 10,
+    fontWeight: '800',
+    color: '#1a1a1a',
+    marginBottom: 16,
+    letterSpacing: 0.5,
   },
   priceLine: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 5,
+    paddingVertical: 6,
+  },
+  priceLabel: {
+    color: '#666',
+    fontSize: 14,
+  },
+  priceValue: {
+    color: '#1a1a1a',
+    fontWeight: '600',
+    fontSize: 14,
   },
   totalLine: {
     borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
-    marginTop: 10,
-    paddingTop: 10,
+    borderTopColor: '#eee',
+    marginTop: 12,
+    paddingTop: 12,
+  },
+  totalLabel: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1a1a1a',
+  },
+  totalValue: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#b90617',
   },
   footer: {
     backgroundColor: '#fff',
-    padding: 15,
+    padding: 16,
+    paddingBottom: 24,
     borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
+    borderTopColor: '#f0f0f0',
+    elevation: 8,
   },
-  totalContainer: {
+  footerTotalContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 10,
+    alignItems: 'center',
+    marginBottom: 16,
   },
-  totalAmount: {
-    fontWeight: 'bold',
+  footerTotalLabel: {
+    color: '#666',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  footerTotalAmount: {
+    fontWeight: '800',
     color: '#b90617',
+    fontSize: 24,
   },
   checkoutButton: {
-    height: 50,
+    height: 52,
+    borderRadius: 14,
+    justifyContent: 'center',
+  },
+  checkoutButtonLabel: {
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: 0.5,
   },
 });
 
