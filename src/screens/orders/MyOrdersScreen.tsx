@@ -127,9 +127,9 @@ const MyOrdersScreen: React.FC<Props> = ({ navigation }) => {
       style={[styles.container, { backgroundColor: theme.colors.background }]}
       edges={['top', 'left', 'right', 'bottom']}
     >
-      <Appbar.Header style={{ backgroundColor: theme.colors.surface, elevation: 0 }}>
-        <Appbar.BackAction onPress={() => navigation.goBack()} color={theme.colors.onSurface} />
-        <Appbar.Content title="My Orders" titleStyle={{ color: theme.colors.onSurface, fontWeight: '700' }} />
+      <Appbar.Header style={{ backgroundColor: theme.colors.primary, elevation: 0 }}>
+        <Appbar.BackAction onPress={() => navigation.goBack()} iconColor='#fff' />
+        <Appbar.Content title="My Orders" titleStyle={{ color: '#fff', fontWeight: '700' }} color='#fff' />
       </Appbar.Header>
 
       {orders.length === 0 ? (
