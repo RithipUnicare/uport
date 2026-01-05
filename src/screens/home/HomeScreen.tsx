@@ -10,6 +10,7 @@ import {
   Animated,
   Easing,
   FlatList,
+  
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
@@ -32,9 +33,10 @@ import CameraService from '../../services/camera.service';
 import Toast from 'react-native-toast-message';
 import { BASE_URL } from '../../services/api';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import LinearGradient from 'react-native-linear-gradient';
 type Props = NativeStackScreenProps<RootStackParamList, 'Home'>;
 
-const { width } = Dimensions.get('window');
+const { width, height } = Dimensions.get('window');
 
 const HomeScreen: React.FC<Props> = ({ navigation }) => {
   const theme = useTheme();
@@ -272,20 +274,22 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
   }
 
   return (
+    
     <SafeAreaView
       style={[styles.container, { backgroundColor: theme.colors.background }]}
       edges={['top', 'left', 'right', 'bottom']}
     >
-      <Appbar.Header style={{ backgroundColor: theme.colors.background, elevation: 0 }}>
-        <Appbar.Content title="Routegadi" titleStyle={{ color: theme.colors.onSurface, fontWeight: '700' }} />
+     
+      <Appbar.Header style={{ backgroundColor: theme.colors.primary, elevation: 0 }}>
+        <Appbar.Content title="Routegadi" titleStyle={{ color: '#fff', fontWeight: '700' }} />
         <TouchableOpacity onPress={() => navigation.navigate('Cart')}>
           <View style={styles.cartButton}>
-            <Appbar.Action icon="cart" color={theme.colors.onSurfaceVariant} />
+            <Appbar.Action icon="cart" color={theme.colors.onSurfaceVariant} iconColor='#fff'/>
             {cartCount > 0 && <Badge style={[styles.badge, { backgroundColor: theme.colors.error }]}>{cartCount}</Badge>}
           </View>
         </TouchableOpacity>
       </Appbar.Header>
-
+     <LinearGradient colors={[theme.colors.primary, theme.colors.background]} style={styles.gradient}>
       <ScrollView
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
@@ -294,9 +298,9 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
       >
         <View style={[styles.header, { backgroundColor: theme.colors.surface }]}>
           <View style={styles.welcomeContainer}>
-            <Text style={[styles.welcomeText, { color: theme.colors.onSurface }]}>
+            {/* <Text style={[styles.welcomeText, { color: theme.colors.onSurface }]}>
               Good morning{userName && userType !== '3' ? `, ${userName}` : ''}!
-            </Text>
+            </Text> */}
             <Text style={[styles.subtitleText, { color: theme.colors.onSurfaceVariant }]}>
               What would you like to order today?
             </Text>
@@ -316,7 +320,7 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
         </View>
 
         {banners.length > 0 && (
-          <View style={styles.bannerContainer}>
+          <View style={[styles.bannerContainer, { marginTop: 30 }]}>
             <Image
               source={{ uri: `${BASE_URL}${banners[currentBannerIndex]}` }}
               style={styles.bannerImage}
@@ -337,7 +341,7 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
         )}
 
         {loading ? (
-          <View style={styles.sectionContainer}>
+          <View style={[styles.sectionContainer, { marginTop: 15 }]}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Featured Products</Text>
             </View>
@@ -346,7 +350,7 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.featuredProductsContainer}
               data={[1, 2, 3]}
-              renderItem={({ item, index }) => (
+              renderItem={({  }) => (
                 <View style={styles.featuredProductCard}>
                   <View style={styles.featuredProductTouchable}>
                     <View style={[styles.featuredProductImageContainer, styles.loadingShimmer]} />
@@ -361,7 +365,7 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
             />
           </View>
         ) : featuredProducts.length > 0 ? (
-          <View style={styles.sectionContainer}>
+          <View style={[styles.sectionContainer, { marginTop: 15 }]}>
             <View style={styles.sectionHeader}>
               <Text style={[styles.sectionTitle, { color: theme.colors.onSurface }]}>Featured Products</Text>
               <TouchableOpacity
@@ -393,7 +397,7 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
                 const hasMultipleVariants = product.list_product && product.list_product.length > 1;
 
                 return (
-                  <View style={styles.featuredProductCard}>
+                  <View style={[styles.featuredProductCard, { backgroundColor: '#e8f5e8' }]}>
                     <TouchableOpacity
                       style={styles.featuredProductTouchable}
                       onPress={() =>
@@ -447,6 +451,7 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
                               name="chevron-down"
                               size={16}
                               color="#718096"
+
                             />
                           </TouchableOpacity>
                         )}
@@ -476,7 +481,7 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
                           size={20}
                           color="#fff"
                         />
-                        <Text style={styles.addToCartText}>Add</Text>
+                        {/* <Text style={styles.addToCartText}>Add</Text> */}
                       </TouchableOpacity>
                     )}
                   </View>
@@ -486,7 +491,7 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
             />
           </View>
         ) : !loading && (
-          <View style={styles.sectionContainer}>
+          <View style={[styles.sectionContainer, { marginTop: 15 }]}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Featured Products</Text>
             </View>
@@ -501,7 +506,7 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
           </View>
         )}
 
-        <View style={styles.sectionContainer}>
+        <View style={[styles.sectionContainer, { marginTop: 15 }]}>
           <View style={styles.sectionHeader}>
             <Text style={[styles.sectionTitle, { color: theme.colors.onSurface }]}>Shop by Category</Text>
             <TouchableOpacity
@@ -521,7 +526,7 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
               {categories.map(category => (
                 <TouchableOpacity
                   key={category.id}
-                  style={styles.categoryCard}
+                  style={[styles.categoryCard, { backgroundColor: '#f0f9ff' }]}
                   onPress={() =>
                     navigation.navigate('SubCategory', {
                       categoryId: category.id,
@@ -564,14 +569,14 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
           </View>
         </View>
 
-        <View style={styles.sectionContainer}>
+        <View style={[styles.sectionContainer, { marginTop: 15 }]}>
           <View style={styles.sectionHeader}>
             <Text style={[styles.sectionTitle, { color: theme.colors.onSurface }]}>Quick Actions</Text>
           </View>
 
           <View style={styles.quickActionsContainer}>
             <View style={styles.quickActionsGrid}>
-              <TouchableOpacity style={styles.quickActionCard} onPress={handleUploadList}>
+              <TouchableOpacity style={[styles.quickActionCard, { backgroundColor: '#e6fffa' }]} onPress={handleUploadList}>
                 <View style={styles.quickActionTouchable}>
                   <View style={[styles.quickActionIconContainer, { backgroundColor: '#e6fffa' }]}>
                     <Image
@@ -585,7 +590,7 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={styles.quickActionCard}
+                style={[styles.quickActionCard, { backgroundColor: '#ebf8ff' }]}
                 onPress={() => navigation.navigate('MyOrders')}
               >
                 <View style={styles.quickActionTouchable}>
@@ -602,7 +607,7 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={styles.quickActionCard}
+                style={[styles.quickActionCard, { backgroundColor: '#f0fff4' }]}
                 onPress={() => navigation.navigate('Profile')}
               >
                 <View style={styles.quickActionTouchable}>
@@ -621,7 +626,7 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
           </View>
         </View>
       </ScrollView>
-
+      </LinearGradient>
       <View style={[styles.bottomNav, { backgroundColor: theme.colors.surface, borderTopColor: theme.colors.outline }]}>
         <TouchableOpacity
           style={styles.navItem}
@@ -635,7 +640,7 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
         >
           <View>
             <Appbar.Action icon="cart" color={theme.colors.onSurfaceVariant} />
-            {cartCount > 0 && <Badge style={[styles.badge, { top: -8, right: -8, backgroundColor: theme.colors.error }]}>{cartCount}</Badge>}
+            {cartCount > 0 && <Badge style={[styles.badge, { top: 0, right: 0, backgroundColor: theme.colors.error }]}>{cartCount}</Badge>}
           </View>
         </TouchableOpacity>
         <TouchableOpacity
@@ -651,6 +656,7 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
           <Appbar.Action icon="cog" color={theme.colors.onSurfaceVariant} />
         </TouchableOpacity>
       </View>
+  
     </SafeAreaView>
   );
 };
@@ -777,6 +783,7 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
     overflow: 'hidden',
     position: 'relative',
+    marginTop: 20,
   },
   featuredProductTouchable: {
     flex: 1,
@@ -854,7 +861,7 @@ const styles = StyleSheet.create({
   },
   addToCartButton: {
     position: 'absolute',
-    bottom: 8,
+    bottom: height*0.18,
     right: 8,
     backgroundColor: '#4a90e2',
     flexDirection: 'row',
@@ -888,6 +895,7 @@ const styles = StyleSheet.create({
     width: (width - 48) / 3,
     marginBottom: 16,
     alignItems: 'center',
+    borderRadius: 22,
   },
   categoryImageContainer: {
     width: 70,
@@ -1006,6 +1014,9 @@ const styles = StyleSheet.create({
   loadingShimmer: {
     backgroundColor: '#f7fafc',
     borderRadius: 8,
+  },
+  gradient: {
+    flex: 1,
   },
 });
 

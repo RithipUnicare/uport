@@ -288,7 +288,7 @@ const CartScreen: React.FC<Props> = ({ navigation }) => {
                       <View style={styles.quantityContainer}>
                         <TouchableOpacity
                           style={styles.quantityButton}
-                          onPress={() => updateQuantity(item.product_id, -1)}
+                          onPress={() => updateQuantity(item.product_id, Number(item.quantity) - 1)}
                         >
                           <Text style={styles.quantityButtonText}>−</Text>
                         </TouchableOpacity>
@@ -297,7 +297,7 @@ const CartScreen: React.FC<Props> = ({ navigation }) => {
                           value={item.quantity.toString()}
                           keyboardType="numeric"
                           onChangeText={text => {
-                            const qty = parseInt(text) || 0;
+                            const qty = parseInt(text) || 1;
                             if (qty > 0) {
                               const diff = qty - item.quantity;
                               if (diff !== 0) {
@@ -308,7 +308,7 @@ const CartScreen: React.FC<Props> = ({ navigation }) => {
                         />
                         <TouchableOpacity
                           style={styles.quantityButton}
-                          onPress={() => updateQuantity(item.product_id, 1)}
+                          onPress={() => {updateQuantity(item.product_id, Number(item.quantity) + 1);}}
                         >
                           <Text style={styles.quantityButtonText}>+</Text>
                         </TouchableOpacity>
