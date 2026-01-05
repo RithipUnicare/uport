@@ -33,6 +33,7 @@ interface CartItem {
   id: number;
   product_id: number;
   product_name: string;
+  pro_name?: string;
   product_image: string;
   sales_price: number;
   regular_price: number;
