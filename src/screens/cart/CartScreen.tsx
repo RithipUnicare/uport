@@ -260,7 +260,7 @@ const CartScreen: React.FC<Props> = ({ navigation }) => {
                         style={[styles.itemName, { color: theme.colors.onSurface }]}
                         numberOfLines={2}
                       >
-                        {item.product_name}
+                        {item.pro_name}
                       </Text>
                       <TouchableOpacity
                         onPress={() => removeItem(item.product_id, 0)}
