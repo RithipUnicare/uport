@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   StyleSheet,
@@ -6,6 +6,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   TouchableOpacity,
+  Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
@@ -29,6 +30,10 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
   const theme = useTheme();
   const [loading, setLoading] = useState(false);
 
+  // Animation values
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(50)).current;
+
   // Form fields
   const [name, setName] = useState('');
   const [mobile, setMobile] = useState('');
@@ -44,7 +49,20 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
 
   useEffect(() => {
     loadAreas();
-  }, []);
+    // Start animations when component mounts
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 1000,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [fadeAnim, slideAnim]);
 
   const loadAreas = async () => {
     try {
@@ -143,7 +161,7 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
 
   return (
     <SafeAreaView
-      style={styles.container}
+      style={[styles.container, { backgroundColor: theme.colors.background }]}
       edges={['top', 'left', 'right', 'bottom']}
     >
       <KeyboardAvoidingView
@@ -152,19 +170,19 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
         keyboardVerticalOffset={Platform.OS === 'ios' ? 20 : 20}
       >
         <ScrollView contentContainerStyle={styles.scrollContent}>
-          <View style={styles.header}>
-            <Title style={styles.headerTitle}>Create Account</Title>
-            <Text style={styles.headerSubtitle}>Sign up to get started</Text>
+          <Animated.View style={[styles.header, { opacity: fadeAnim, backgroundColor: theme.colors.background }]}>
+            <Title style={[styles.headerTitle, { color: theme.colors.primary }]}>Create Account</Title>
+            <Text style={[styles.headerSubtitle, { color: theme.colors.onBackground }]}>Sign up to get started</Text>
             <TouchableOpacity
               style={styles.closeButton}
               onPress={() => navigation.goBack()}
             >
-              <Text style={styles.closeText}>✕</Text>
+              <Text style={[styles.closeText, { color: theme.colors.onBackground }]}>✕</Text>
             </TouchableOpacity>
-          </View>
+          </Animated.View>
 
-          <View style={styles.contentContainer}>
-            <Card style={styles.card}>
+          <Animated.View style={[styles.contentContainer, { transform: [{ translateY: slideAnim }] }]}>
+            <Card style={[styles.card, { backgroundColor: theme.colors.surface }]}>
               <Card.Content>
                 <TextInput
                   label="Name"
@@ -231,7 +249,7 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
                 />
 
                 <View style={styles.dropdownContainer}>
-                  <Text style={styles.label}>Select Your Area</Text>
+                  <Text style={[styles.label, { color: theme.colors.onSurface }]}>Select Your Area</Text>
                   <Dropdown
                     style={[
                       styles.dropdown,
@@ -283,7 +301,7 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
                 </Button>
               </Card.Content>
             </Card>
-          </View>
+          </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -293,7 +311,7 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    // backgroundColor will be set via theme
   },
   flex: {
     flex: 1,
@@ -307,17 +325,17 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
     paddingHorizontal: 20,
     alignItems: 'center',
-    backgroundColor: '#f5f5f5',
+    // backgroundColor will be set via theme
   },
   headerTitle: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#b90617',
+    // color will be set via theme
     marginBottom: 5,
   },
   headerSubtitle: {
     fontSize: 16,
-    color: '#666',
+    // color will be set via theme
   },
   closeButton: {
     position: 'absolute',
@@ -326,7 +344,7 @@ const styles = StyleSheet.create({
     padding: 10,
   },
   closeText: {
-    color: '#333',
+    // color will be set via theme
     fontSize: 24,
     fontWeight: 'bold',
   },
@@ -336,7 +354,7 @@ const styles = StyleSheet.create({
   card: {
     elevation: 4,
     borderRadius: 15,
-    backgroundColor: '#fff',
+    // backgroundColor will be set via theme
     marginBottom: 20,
   },
   input: {
@@ -348,7 +366,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 14,
-    color: '#666',
+    // color will be set via theme
     marginBottom: 5,
     fontWeight: '500',
   },

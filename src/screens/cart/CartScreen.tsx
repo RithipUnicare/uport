@@ -1,12 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   StyleSheet,
-  ScrollView,
+
   TouchableOpacity,
   TextInput,
   KeyboardAvoidingView,
   Platform,
+  Animated,
+  Easing,
+  FlatList,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
@@ -14,7 +17,6 @@ import {
   Card,
   Text,
   Button,
-  Badge,
   useTheme,
 } from 'react-native-paper';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -46,11 +48,30 @@ const CartScreen: React.FC<Props> = ({ navigation }) => {
   const [minimumOrder, setMinimumOrder] = useState(0);
   const [userId, setUserId] = useState<number | null>(null);
 
+  // Animation values
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(50)).current;
+
   React.useEffect(() => {
     navigation.addListener('focus', () => {
       loadCart();
     });
-  }, []);
+
+    // Start animations
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 600,
+        easing: Easing.out(Easing.exp),
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [navigation, fadeAnim, slideAnim]);
 
   const loadCart = async () => {
     const userIdStr = await StorageService.getItem('user_id');
@@ -201,17 +222,17 @@ const CartScreen: React.FC<Props> = ({ navigation }) => {
 
   return (
     <SafeAreaView
-      style={styles.container}
+      style={[styles.container, { backgroundColor: theme.colors.background }]}
       edges={['top', 'left', 'right', 'bottom']}
     >
-      <Appbar.Header style={{ backgroundColor: theme.colors.primary }}>
-        <Appbar.BackAction onPress={() => navigation.goBack()} color="#fff" />
-        <Appbar.Content title="My Cart" color="#fff" />
+      <Appbar.Header style={{ backgroundColor: theme.colors.surface, elevation: 0 }}>
+        <Appbar.BackAction onPress={() => navigation.goBack()} color={theme.colors.onSurface} />
+        <Appbar.Content title="My Cart" titleStyle={{ color: theme.colors.onSurface, fontWeight: '700' }} />
       </Appbar.Header>
 
       {cartItems.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <Text variant="titleLarge">Your cart is empty</Text>
+        <Animated.View style={[styles.emptyContainer, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+          <Text variant="titleLarge" style={{ color: theme.colors.onSurface }}>Your cart is empty</Text>
           <Button
             mode="contained"
             onPress={() => navigation.navigate('Home')}
@@ -219,7 +240,7 @@ const CartScreen: React.FC<Props> = ({ navigation }) => {
           >
             Start Shopping
           </Button>
-        </View>
+        </Animated.View>
       ) : (
         <>
           <KeyboardAvoidingView
@@ -227,14 +248,16 @@ const CartScreen: React.FC<Props> = ({ navigation }) => {
             behavior={Platform.OS === 'ios' ? 'padding' : undefined}
             keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
           >
-            <ScrollView style={styles.content}>
-              {cartItems.map(item => (
+            <Animated.FlatList
+              style={[styles.content, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}
+              data={cartItems}
+              renderItem={({ item }) => (
                 <Card key={item.product_id} style={styles.cartItem}>
                   <Card.Content>
                     <View style={styles.itemHeader}>
                       <Text
                         variant="titleMedium"
-                        style={styles.itemName}
+                        style={[styles.itemName, { color: theme.colors.onSurface }]}
                         numberOfLines={2}
                       >
                         {item.product_name}
@@ -246,20 +269,20 @@ const CartScreen: React.FC<Props> = ({ navigation }) => {
                         <MaterialCommunityIcons
                           name="delete-outline"
                           size={22}
-                          color="#f44336"
+                          color={theme.colors.error}
                         />
                       </TouchableOpacity>
                     </View>
 
                     <View style={styles.itemDetails}>
                       <View style={styles.priceContainer}>
-                        <Text variant="titleMedium" style={styles.price}>
+                        <Text variant="titleMedium" style={[styles.price, { color: theme.colors.onSurface }]}>
                           ₹{item.sales_price}
                         </Text>
-                        <Text style={styles.oldPrice}>
+                        <Text style={[styles.oldPrice, { color: theme.colors.onSurfaceVariant }]}>
                           ₹{item.regular_price}
                         </Text>
-                        <Text style={styles.size}>{item.product_size}</Text>
+                        <Text style={[styles.size, { color: theme.colors.onSurfaceVariant }]}>{item.product_size}</Text>
                       </View>
 
                       <View style={styles.quantityContainer}>
@@ -293,50 +316,52 @@ const CartScreen: React.FC<Props> = ({ navigation }) => {
                     </View>
                   </Card.Content>
                 </Card>
-              ))}
-
-              <Card style={styles.priceCard}>
-                <Card.Content>
-                  <Text variant="titleMedium" style={styles.priceTitle}>
-                    Price Details
-                  </Text>
-                  <View style={styles.priceLine}>
-                    <Text style={styles.priceLabel}>
-                      Price ({cartItems.length} items)
+              )}
+              keyExtractor={(item) => item.product_id.toString()}
+              ListFooterComponent={() => (
+                <Card style={styles.priceCard}>
+                  <Card.Content>
+                    <Text variant="titleMedium" style={[styles.priceTitle, { color: theme.colors.onSurface }]}>
+                      Price Details
                     </Text>
-                    <Text style={styles.priceValue}>
-                      ₹{subtotal.toFixed(2)}
-                    </Text>
-                  </View>
-                  <View style={styles.priceLine}>
-                    <Text style={styles.priceLabel}>Delivery Charges</Text>
-                    <Text
-                      style={[
-                        styles.priceValue,
-                        { color: deliveryCharge === 0 ? '#4caf50' : '#1a1a1a' },
-                      ]}
-                    >
-                      {deliveryCharge === 0
-                        ? 'FREE'
-                        : `₹${deliveryCharge.toFixed(2)}`}
-                    </Text>
-                  </View>
-                  <View style={[styles.priceLine, styles.totalLine]}>
-                    <Text style={styles.totalLabel}>Total Amount</Text>
-                    <Text style={styles.totalValue}>
-                      ₹{calculateTotal().toFixed(2)}
-                    </Text>
-                  </View>
-                </Card.Content>
-              </Card>
-            </ScrollView>
+                    <View style={styles.priceLine}>
+                      <Text style={[styles.priceLabel, { color: theme.colors.onSurfaceVariant }]}>
+                        Price ({cartItems.length} items)
+                      </Text>
+                      <Text style={[styles.priceValue, { color: theme.colors.onSurface }]}>
+                        ₹{subtotal.toFixed(2)}
+                      </Text>
+                    </View>
+                    <View style={styles.priceLine}>
+                      <Text style={[styles.priceLabel, { color: theme.colors.onSurfaceVariant }]}>Delivery Charges</Text>
+                      <Text
+                        style={[
+                          styles.priceValue,
+                          { color: deliveryCharge === 0 ? theme.colors.primary : theme.colors.onSurface },
+                        ]}
+                      >
+                        {deliveryCharge === 0
+                          ? 'FREE'
+                          : `₹${deliveryCharge.toFixed(2)}`}
+                      </Text>
+                    </View>
+                    <View style={[styles.priceLine, styles.totalLine]}>
+                      <Text style={[styles.totalLabel, { color: theme.colors.onSurface }]}>Total Amount</Text>
+                      <Text style={[styles.totalValue, { color: theme.colors.primary }]}>
+                        ₹{calculateTotal().toFixed(2)}
+                      </Text>
+                    </View>
+                  </Card.Content>
+                </Card>
+              )}
+            />
           </KeyboardAvoidingView>
 
-          <View style={styles.footer}>
+          <View style={[styles.footer, { backgroundColor: theme.colors.surface, borderTopColor: theme.colors.outline }]}>
             <View style={styles.footerTotalContainer}>
               <View>
-                <Text style={styles.footerTotalLabel}>Total Payable</Text>
-                <Text style={styles.footerTotalAmount}>
+                <Text style={[styles.footerTotalLabel, { color: theme.colors.onSurfaceVariant }]}>Total Payable</Text>
+                <Text style={[styles.footerTotalAmount, { color: theme.colors.primary }]}>
                   ₹{calculateTotal().toFixed(2)}
                 </Text>
               </View>
@@ -363,7 +388,7 @@ const CartScreen: React.FC<Props> = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    // backgroundColor will be set via theme
   },
   content: {
     flex: 1,

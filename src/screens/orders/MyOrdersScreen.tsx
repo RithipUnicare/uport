@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, ScrollView, RefreshControl } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, StyleSheet, ScrollView, RefreshControl, Animated, Easing, FlatList } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   Appbar,
@@ -29,9 +29,28 @@ const MyOrdersScreen: React.FC<Props> = ({ navigation }) => {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [dialogVisible, setDialogVisible] = useState(false);
 
+  // Animation values
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(50)).current;
+
   useEffect(() => {
     loadOrders();
-  }, []);
+
+    // Start animations
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 600,
+        easing: Easing.out(Easing.exp),
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [fadeAnim, slideAnim]);
 
   const loadOrders = async () => {
     const userId = await StorageService.getItem('user_id');
@@ -105,33 +124,29 @@ const MyOrdersScreen: React.FC<Props> = ({ navigation }) => {
 
   return (
     <SafeAreaView
-      style={styles.container}
+      style={[styles.container, { backgroundColor: theme.colors.background }]}
       edges={['top', 'left', 'right', 'bottom']}
     >
-      <Appbar.Header style={{ backgroundColor: theme.colors.primary }}>
-        <Appbar.BackAction onPress={() => navigation.goBack()} color="#fff" />
-        <Appbar.Content title="My Orders" color="#fff" />
+      <Appbar.Header style={{ backgroundColor: theme.colors.surface, elevation: 0 }}>
+        <Appbar.BackAction onPress={() => navigation.goBack()} color={theme.colors.onSurface} />
+        <Appbar.Content title="My Orders" titleStyle={{ color: theme.colors.onSurface, fontWeight: '700' }} />
       </Appbar.Header>
 
       {orders.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <Text variant="titleMedium" style={styles.emptyText}>
+        <Animated.View style={[styles.emptyContainer, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+          <Text variant="titleMedium" style={[styles.emptyText, { color: theme.colors.onSurface }]}>
             No orders yet
           </Text>
-          <Text variant="bodyMedium" style={styles.subtitle}>
+          <Text variant="bodyMedium" style={[styles.subtitle, { color: theme.colors.onSurfaceVariant }]}>
             Start shopping to see your orders here
           </Text>
-        </View>
+        </Animated.View>
       ) : (
-        <ScrollView
-          style={styles.content}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-          }
-        >
-          {orders.map(order => (
+        <Animated.FlatList
+          style={[styles.content, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}
+          data={orders}
+          renderItem={({ item: order }) => (
             <Card
-              key={order.order_id}
               style={styles.orderCard}
               onPress={() => {
                 setSelectedOrder(order);
@@ -141,10 +156,10 @@ const MyOrdersScreen: React.FC<Props> = ({ navigation }) => {
               <Card.Content>
                 <View style={styles.orderHeader}>
                   <View>
-                    <Text variant="titleMedium" style={styles.orderNumber}>
+                    <Text variant="titleMedium" style={[styles.orderNumber, { color: theme.colors.onSurface }]}>
                       #{order.order_no}
                     </Text>
-                    <Text variant="bodySmall" style={styles.orderDate}>
+                    <Text variant="bodySmall" style={[styles.orderDate, { color: theme.colors.onSurfaceVariant }]}>
                       Ordered on{' '}
                       {new Date(order.created_on).toLocaleDateString()}
                     </Text>
@@ -162,28 +177,32 @@ const MyOrdersScreen: React.FC<Props> = ({ navigation }) => {
 
                 <View style={styles.orderDetails}>
                   <View style={styles.detailRow}>
-                    <Text style={styles.detailLabel}>Total Items</Text>
-                    <Text style={styles.detailValue}>
+                    <Text style={[styles.detailLabel, { color: theme.colors.onSurfaceVariant }]}>Total Items</Text>
+                    <Text style={[styles.detailValue, { color: theme.colors.onSurface }]}>
                       {order.order_details?.length || 0}
                     </Text>
                   </View>
                   <View style={styles.detailRow}>
-                    <Text style={styles.detailLabel}>Delivery Charge</Text>
-                    <Text style={styles.detailValue}>
+                    <Text style={[styles.detailLabel, { color: theme.colors.onSurfaceVariant }]}>Delivery Charge</Text>
+                    <Text style={[styles.detailValue, { color: theme.colors.onSurface }]}>
                       ₹{parseFloat(order.delivery_charge).toFixed(2)}
                     </Text>
                   </View>
                   <View style={[styles.detailRow, styles.totalRow]}>
-                    <Text style={styles.totalLabel}>Grand Total</Text>
-                    <Text style={styles.totalAmount}>
+                    <Text style={[styles.totalLabel, { color: theme.colors.onSurface }]}>Grand Total</Text>
+                    <Text style={[styles.totalAmount, { color: theme.colors.primary }]}>
                       ₹{parseFloat(order.total_amount).toFixed(2)}
                     </Text>
                   </View>
                 </View>
               </Card.Content>
             </Card>
-          ))}
-        </ScrollView>
+          )}
+          keyExtractor={(item) => item.order_id.toString()}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
+        />
       )}
 
       <Portal>
@@ -300,7 +319,7 @@ const MyOrdersScreen: React.FC<Props> = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    // backgroundColor will be set via theme
   },
   loadingContainer: {
     flex: 1,

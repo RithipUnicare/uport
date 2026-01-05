@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -6,6 +6,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   TouchableOpacity,
+  Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
@@ -29,6 +30,26 @@ const VerifyOtpScreen: React.FC<Props> = ({ navigation, route }) => {
 
   const [loading, setLoading] = useState(false);
   const [enteredOtp, setEnteredOtp] = useState('');
+
+  // Animation values
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(50)).current;
+
+  useEffect(() => {
+    // Start animations when component mounts
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 1000,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [fadeAnim, slideAnim]);
 
   const handleVerifyOtp = async () => {
     // Validation
@@ -90,7 +111,7 @@ const VerifyOtpScreen: React.FC<Props> = ({ navigation, route }) => {
 
   return (
     <SafeAreaView
-      style={styles.container}
+      style={[styles.container, { backgroundColor: theme.colors.background }]}
       edges={['top', 'left', 'right', 'bottom']}
     >
       <KeyboardAvoidingView
@@ -99,27 +120,27 @@ const VerifyOtpScreen: React.FC<Props> = ({ navigation, route }) => {
         keyboardVerticalOffset={Platform.OS === 'ios' ? 20 : 20}
       >
         <ScrollView contentContainerStyle={styles.scrollContent}>
-          <View style={styles.header}>
-            <Text style={styles.title}>Verify OTP</Text>
+          <Animated.View style={[styles.header, { opacity: fadeAnim, backgroundColor: theme.colors.primary }]}>
+            <Text style={[styles.title, { color: theme.colors.onPrimary }]}>Verify OTP</Text>
             <TouchableOpacity
               style={styles.closeButton}
               onPress={() => navigation.goBack()}
             >
-              <Text style={styles.closeText}>✕</Text>
+              <Text style={[styles.closeText, { color: theme.colors.onPrimary }]}>✕</Text>
             </TouchableOpacity>
-            <Text style={styles.subtitle}>
+            <Text style={[styles.subtitle, { color: theme.colors.onPrimary }]}>
               We sent OTP code to your mobile number
             </Text>
-            <Text style={styles.mobileNumber}>{registerData.mobile}</Text>
-          </View>
+            <Text style={[styles.mobileNumber, { color: theme.colors.onPrimary }]}>{registerData.mobile}</Text>
+          </Animated.View>
 
-          <View style={styles.formContainer}>
+          <Animated.View style={[styles.formContainer, { transform: [{ translateY: slideAnim }] }]}>
             {/* Display the OTP from API */}
-            <Card style={styles.otpCard}>
+            <Card style={[styles.otpCard, { backgroundColor: theme.colors.surface }]}>
               <Card.Content>
-                <Text style={styles.otpLabel}>Your OTP Code:</Text>
-                <Text style={styles.otpDisplay}>{otp}</Text>
-                <Text style={styles.otpNote}>
+                <Text style={[styles.otpLabel, { color: theme.colors.onSurface }]}>Your OTP Code:</Text>
+                <Text style={[styles.otpDisplay, { color: theme.colors.primary }]}>{otp}</Text>
+                <Text style={[styles.otpNote, { color: theme.colors.onSurfaceVariant || '#999' }]}>
                   (For testing purposes, the OTP is shown above)
                 </Text>
               </Card.Content>
@@ -152,10 +173,10 @@ const VerifyOtpScreen: React.FC<Props> = ({ navigation, route }) => {
             >
               <Text style={styles.resendText}>
                 Didn't receive the code?{' '}
-                <Text style={styles.resendLink}>Go Back</Text>
+                <Text style={[styles.resendLink, { color: theme.colors.primary }]}>Go Back</Text>
               </Text>
             </TouchableOpacity>
-          </View>
+          </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -165,7 +186,7 @@ const VerifyOtpScreen: React.FC<Props> = ({ navigation, route }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    // backgroundColor will be set via theme
   },
   flex: {
     flex: 1,
@@ -174,7 +195,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   header: {
-    backgroundColor: '#b90617',
+    // backgroundColor will be set via theme
     paddingVertical: 30,
     paddingHorizontal: 20,
     alignItems: 'center',
@@ -182,7 +203,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#fff',
+    // color will be set via theme
     marginBottom: 10,
   },
   closeButton: {
@@ -191,17 +212,17 @@ const styles = StyleSheet.create({
     right: 20,
   },
   closeText: {
-    color: '#fff',
+    // color will be set via theme
     fontSize: 24,
   },
   subtitle: {
-    color: '#fff',
+    // color will be set via theme
     fontSize: 14,
     textAlign: 'center',
     marginTop: 10,
   },
   mobileNumber: {
-    color: '#fff',
+    // color will be set via theme
     fontSize: 18,
     fontWeight: 'bold',
     marginTop: 5,
@@ -211,24 +232,24 @@ const styles = StyleSheet.create({
   },
   otpCard: {
     marginBottom: 20,
-    backgroundColor: '#f5f5f5',
+    // backgroundColor will be set via theme
   },
   otpLabel: {
     fontSize: 14,
-    color: '#666',
+    // color will be set via theme
     marginBottom: 5,
   },
   otpDisplay: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#b90617',
+    // color will be set via theme
     textAlign: 'center',
     letterSpacing: 10,
     marginVertical: 10,
   },
   otpNote: {
     fontSize: 12,
-    color: '#999',
+    // color will be set via theme
     textAlign: 'center',
     fontStyle: 'italic',
   },
@@ -250,7 +271,7 @@ const styles = StyleSheet.create({
     color: '#666',
   },
   resendLink: {
-    color: '#b90617',
+    // color will be set via theme
     fontWeight: 'bold',
   },
 });

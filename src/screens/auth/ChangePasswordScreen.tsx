@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   StyleSheet,
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Appbar, TextInput, Button, Text, useTheme } from 'react-native-paper';
@@ -21,6 +22,26 @@ const ChangePasswordScreen: React.FC<Props> = ({ navigation }) => {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Animation values
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(50)).current;
+
+  useEffect(() => {
+    // Start animations when component mounts
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 1000,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [fadeAnim, slideAnim]);
 
   const handleChangePassword = async () => {
     if (!currentPassword || !newPassword || !confirmPassword) {
@@ -75,12 +96,12 @@ const ChangePasswordScreen: React.FC<Props> = ({ navigation }) => {
 
   return (
     <SafeAreaView
-      style={styles.container}
+      style={[styles.container, { backgroundColor: theme.colors.background }]}
       edges={['top', 'left', 'right', 'bottom']}
     >
       <Appbar.Header style={{ backgroundColor: theme.colors.primary }}>
-        <Appbar.BackAction onPress={() => navigation.goBack()} color="#fff" />
-        <Appbar.Content title="Change Password" color="#fff" />
+        <Appbar.BackAction onPress={() => navigation.goBack()} color={theme.colors.onPrimary} />
+        <Appbar.Content title="Change Password" color={theme.colors.onPrimary} />
       </Appbar.Header>
 
       <KeyboardAvoidingView
@@ -88,18 +109,18 @@ const ChangePasswordScreen: React.FC<Props> = ({ navigation }) => {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <ScrollView contentContainerStyle={styles.scrollContent}>
-          <View style={styles.header}>
+          <Animated.View style={[styles.header, { opacity: fadeAnim, backgroundColor: theme.colors.surface }]}>
             <View
               style={[styles.logo, { backgroundColor: theme.colors.primary }]}
             >
-              <Text style={styles.logoText}>ROUTEGADI</Text>
+              <Text style={[styles.logoText, { color: theme.colors.onPrimary }]}>ROUTEGADI</Text>
             </View>
-            <Text style={styles.subtitle}>
+            <Text style={[styles.subtitle, { color: theme.colors.onSurface }]}>
               Need to change password, Here you go...
             </Text>
-          </View>
+          </Animated.View>
 
-          <View style={styles.form}>
+          <Animated.View style={[styles.form, { transform: [{ translateY: slideAnim }] }]}>
             <TextInput
               label="Current Password"
               value={currentPassword}
@@ -134,7 +155,7 @@ const ChangePasswordScreen: React.FC<Props> = ({ navigation }) => {
             >
               Change Password
             </Button>
-          </View>
+          </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -142,10 +163,10 @@ const ChangePasswordScreen: React.FC<Props> = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
+  container: { flex: 1 },
   content: { flex: 1 },
   scrollContent: { flexGrow: 1 },
-  header: { alignItems: 'center', padding: 30, backgroundColor: '#f5f5f5' },
+  header: { alignItems: 'center', padding: 30 },
   logo: {
     width: 80,
     height: 80,
@@ -154,8 +175,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 20,
   },
-  logoText: { color: '#fff', fontSize: 12, fontWeight: 'bold' },
-  subtitle: { fontSize: 14, color: '#666', textAlign: 'center' },
+  logoText: { fontSize: 12, fontWeight: 'bold' },
+  subtitle: { fontSize: 14, textAlign: 'center' },
   form: { padding: 20 },
   input: { marginBottom: 15 },
   button: { marginTop: 20 },
