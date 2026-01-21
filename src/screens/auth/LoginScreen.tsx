@@ -154,7 +154,7 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
       >
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <Animated.View style={[styles.header, { opacity: fadeAnim }]}>
-            <Title style={[styles.title, { color: theme.colors.primary }]}>ROUTEGADI</Title>
+            <Title style={[styles.title, { color: theme.colors.primary }]}>ROUTE GADI</Title>
 
             <View style={styles.logoContainer}>
               <Animated.View style={[styles.logoBackground, { transform: [{ scale: logoScaleAnim }], backgroundColor: theme.colors.primary }]}>
@@ -192,11 +192,11 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
             </Animated.View>
           </Animated.View>
 
-          <Animated.View style={[styles.cardContainer, { 
+          <Animated.View style={[styles.cardContainer, {
             transform: [
               { translateY: slideAnim },
               { scale: scaleAnim }
-            ] 
+            ]
           }]}>
             <Card style={[styles.card, { backgroundColor: theme.colors.surface }]}>
               <Card.Content style={styles.cardContent}>

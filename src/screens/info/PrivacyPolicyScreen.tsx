@@ -1,9 +1,9 @@
 import React from 'react';
 import { View, StyleSheet, ScrollView } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Appbar, Text, useTheme } from 'react-native-paper';
+import { Text, useTheme } from 'react-native-paper';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/AppNavigator';
+import GradientHeader from '../../components/GradientHeader';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'PrivacyPolicy'>;
 
@@ -11,14 +11,12 @@ const PrivacyPolicyScreen: React.FC<Props> = ({ navigation }) => {
   const theme = useTheme();
 
   return (
-    <SafeAreaView
-      style={styles.container}
-      edges={['top', 'left', 'right', 'bottom']}
-    >
-      <Appbar.Header style={{ backgroundColor: theme.colors.primary }}>
-        <Appbar.BackAction onPress={() => navigation.goBack()} color="#fff" />
-        <Appbar.Content title="Privacy Policy" color="#fff" />
-      </Appbar.Header>
+    <View style={styles.container}>
+      <GradientHeader
+        title="Privacy Policy"
+        showBack={true}
+        onBackPress={() => navigation.goBack()}
+      />
 
       <ScrollView
         style={styles.content}
@@ -70,7 +68,7 @@ const PrivacyPolicyScreen: React.FC<Props> = ({ navigation }) => {
           </Text>
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 };
 

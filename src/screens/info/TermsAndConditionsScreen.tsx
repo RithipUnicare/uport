@@ -1,9 +1,9 @@
 import React from 'react';
 import { View, StyleSheet, ScrollView } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Appbar, Text, useTheme } from 'react-native-paper';
+import { Text, useTheme } from 'react-native-paper';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/AppNavigator';
+import GradientHeader from '../../components/GradientHeader';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'TermsAndConditions'>;
 
@@ -11,14 +11,12 @@ const TermsAndConditionsScreen: React.FC<Props> = ({ navigation }) => {
   const theme = useTheme();
 
   return (
-    <SafeAreaView
-      style={styles.container}
-      edges={['top', 'left', 'right', 'bottom']}
-    >
-      <Appbar.Header style={{ backgroundColor: theme.colors.primary }}>
-        <Appbar.BackAction onPress={() => navigation.goBack()} color="#fff" />
-        <Appbar.Content title="Terms & Conditions" color="#fff" />
-      </Appbar.Header>
+    <View style={styles.container}>
+      <GradientHeader
+        title="Terms & Conditions"
+        showBack={true}
+        onBackPress={() => navigation.goBack()}
+      />
 
       <ScrollView
         style={styles.content}
@@ -30,7 +28,7 @@ const TermsAndConditionsScreen: React.FC<Props> = ({ navigation }) => {
           </Text>
           <Text variant="bodyMedium" style={styles.paragraph}>
             www.routegadi.in (hereinafter, the "app") is owned and operated by
-            Routegadi. You are advised to read and understand these Terms
+            routegadi. You are advised to read and understand these Terms
             carefully as they govern your use of the application and its
             services.
           </Text>
@@ -41,7 +39,7 @@ const TermsAndConditionsScreen: React.FC<Props> = ({ navigation }) => {
             2. About Us
           </Text>
           <Text variant="bodyMedium" style={styles.paragraph}>
-            Buy grocery and household essentials online from Routegadi at the
+            Buy grocery and household essentials online from routegadi.in at the
             best prices and get them delivered directly to your doorstep with
             our reliable delivery service.
           </Text>
@@ -86,7 +84,7 @@ const TermsAndConditionsScreen: React.FC<Props> = ({ navigation }) => {
           </Text>
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 };
 

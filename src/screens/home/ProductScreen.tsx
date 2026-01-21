@@ -5,17 +5,17 @@ import {
   ScrollView,
   Image,
   TouchableOpacity,
+  Dimensions,
+  TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   Appbar,
   Card,
   Text,
-  Button,
-  Chip,
   ActivityIndicator,
-  Badge,
   useTheme,
+  IconButton,
 } from 'react-native-paper';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/AppNavigator';
@@ -24,11 +24,15 @@ import CartService from '../../services/cart.service';
 import ApiService from '../../services/api';
 import { StorageService } from '../../utils/storage';
 import Toast from 'react-native-toast-message';
+import LinearGradient from 'react-native-linear-gradient';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Product'>;
 
+const { width } = Dimensions.get('window');
+
 const ProductScreen: React.FC<Props> = ({ navigation, route }) => {
-  const { subcategoryId, subcategoryName } = route.params;
+  const { subcategoryId, subcategoryName, searchQuery, product: passedProduct } = route.params;
   const theme = useTheme();
   const [loading, setLoading] = useState(true);
   const [products, setProducts] = useState<any[]>([]);
@@ -37,6 +41,8 @@ const ProductScreen: React.FC<Props> = ({ navigation, route }) => {
   const [selectedVariants, setSelectedVariants] = useState<{
     [key: number]: number;
   }>({});
+  const [localQtys, setLocalQtys] = useState<{ [key: number]: string }>({});
+  const [isInputFocused, setIsInputFocused] = useState<{ [key: number]: boolean }>({});
 
   useEffect(() => {
     loadProducts();
@@ -56,30 +62,57 @@ const ProductScreen: React.FC<Props> = ({ navigation, route }) => {
 
   const loadProducts = async () => {
     const id = await StorageService.getItem('user_id');
+    const uId = id ? parseInt(id) : 1;
     try {
-      const response = await ProductService.getProducts(
-        subcategoryId,
-        id ? parseInt(id) : 1,
-      );
+      if (passedProduct) {
+        setProducts([passedProduct]);
+        const defaults: { [key: number]: number } = { 0: 0 };
+        setSelectedVariants(defaults);
+        setLoading(false);
+        return;
+      }
+
+      let response;
+      if (searchQuery) {
+        response = await ProductService.searchProducts(searchQuery.trim(), uId);
+      } else if (subcategoryId) {
+        response = await ProductService.getProducts(subcategoryId, uId);
+      } else {
+        setProducts([]);
+        setLoading(false);
+        return;
+      }
+
       if (response.status === 1 && response.products) {
         setProducts(response.products);
         // Set default selected variant (first one) for each product
         const defaults: { [key: number]: number } = {};
+        const qtyMap: { [key: number]: string } = {};
         response.products.forEach((product: any, index: number) => {
           if (product.list_product && product.list_product.length > 0) {
             defaults[index] = 0;
+            const variant = product.list_product[0];
+            qtyMap[variant.id] = (variant.quantity || 0).toString();
           }
         });
         setSelectedVariants(defaults);
+        setLocalQtys(prev => ({ ...prev, ...qtyMap }));
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error loading products:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Error Loading Products',
+        text2: error?.response?.status === 404
+          ? 'Product list endpoint not found (404)'
+          : 'Could not connect to service',
+      });
     } finally {
       setLoading(false);
     }
   };
 
-  const addToCart = async (productId: number) => {
+  const addToCart = async (product: any) => {
     if (!userId) {
       Toast.show({
         type: 'error',
@@ -89,19 +122,36 @@ const ProductScreen: React.FC<Props> = ({ navigation, route }) => {
       return;
     }
 
+    const index = products.indexOf(product);
+    const selectedVariantIndex = selectedVariants[index] || 0;
+    const selectedVariant = product.list_product?.[selectedVariantIndex];
+
+    if (!selectedVariant) return;
+
+    // Check if already in cart
+    if (selectedVariant.quantity > 0) {
+      Toast.show({
+        type: 'info',
+        text1: 'Already in Cart',
+        text2: 'Please update the quantity directly',
+      });
+      return;
+    }
+
     try {
       await CartService.addToCart({
         user_id: userId,
-        product_id: productId,
+        product_id: selectedVariant.id,
         quantity: 1,
       });
 
       await loadCartCount();
+      await loadProducts(); // Refresh to get updated quantities
 
       Toast.show({
         type: 'success',
-        text1: 'Success',
-        text2: 'Item added to cart',
+        text1: '✓ Added to Cart',
+        text2: 'Item successfully added',
       });
     } catch (error) {
       Toast.show({
@@ -112,320 +162,521 @@ const ProductScreen: React.FC<Props> = ({ navigation, route }) => {
     }
   };
 
-  const updateQuantity = async (productId: number, increment: number) => {
+  const updateQuantity = async (productId: number, absoluteQty: number) => {
     if (!userId) return;
+
+    // Prevent negative quantities
+    if (absoluteQty < 0) return;
 
     try {
       await CartService.addToCart({
         user_id: userId,
         product_id: productId,
-        quantity: increment, // +1 to add, -1 to subtract
+        quantity: absoluteQty,
       });
-      await loadProducts();
+      await loadProducts(); // Refresh quantities
+      await loadCartCount();
     } catch (error) {
       console.error('Error updating quantity:', error);
     }
   };
 
+  const handleManualQuantity = async (productId: number, currentQty: number, newQtyString: string) => {
+    const newQty = parseInt(newQtyString);
+    if (!isNaN(newQty) && newQty >= 0) {
+      if (newQty !== currentQty) {
+        await updateQuantity(productId, newQty);
+      } else {
+        setLocalQtys(prev => ({ ...prev, [productId]: currentQty.toString() }));
+      }
+    } else {
+      loadProducts(); // Reset to valid state
+    }
+  };
+
+  const handleQtyInputChange = (productId: number, text: string) => {
+    const cleanText = text.replace(/[^0-9]/g, '');
+    setLocalQtys(prev => ({ ...prev, [productId]: cleanText }));
+  };
+
+  const calculateDiscount = (regular: number, sales: number) => {
+    return Math.round(((regular - sales) / regular) * 100);
+  };
+
   return (
-    <SafeAreaView
-      style={styles.container}
-      edges={['top', 'left', 'right', 'bottom']}
-    >
-      <Appbar.Header style={{ backgroundColor: theme.colors.primary }}>
-        <Appbar.BackAction onPress={() => navigation.goBack()} color="#fff" />
-        <Appbar.Content title="Product" color="#fff" />
-        <TouchableOpacity onPress={() => navigation.navigate('Cart')}>
-          <View style={styles.cartButton}>
-            <Appbar.Action icon="cart" color="#fff" />
-            {cartCount > 0 && <Badge style={styles.badge}>{cartCount}</Badge>}
+    <View style={styles.container}>
+      {/* Modern Header */}
+      <LinearGradient
+        colors={[theme.colors.primary, '#5D4037']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.headerGradient}
+      >
+        <SafeAreaView edges={['top']}>
+          <View style={styles.headerContent}>
+            <TouchableOpacity
+              onPress={() => navigation.goBack()}
+              style={styles.backButton}
+            >
+              <Icon name="arrow-left" size={24} color="#fff" />
+            </TouchableOpacity>
+
+            <View style={styles.headerCenter}>
+              <Text style={styles.headerTitle}>
+                {subcategoryName || searchQuery || passedProduct?.eng_name || 'Products'}
+              </Text>
+              <Text style={styles.headerSubtitle}>
+                {products.length} {products.length === 1 ? 'item' : 'items'}
+              </Text>
+            </View>
+
+            <TouchableOpacity
+              onPress={() => navigation.navigate('Cart')}
+              style={styles.cartButtonContainer}
+            >
+              <View style={styles.cartIconWrapper}>
+                <Icon name="cart-outline" size={26} color="#fff" />
+                {cartCount > 0 && (
+                  <View style={styles.cartBadge}>
+                    <Text style={styles.cartBadgeText}>{cartCount}</Text>
+                  </View>
+                )}
+              </View>
+            </TouchableOpacity>
           </View>
-        </TouchableOpacity>
-      </Appbar.Header>
+        </SafeAreaView>
+      </LinearGradient>
 
       {loading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={theme.colors.primary} />
+          <Text style={styles.loadingText}>Loading amazing products...</Text>
         </View>
       ) : (
-        <ScrollView style={styles.content}>
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
           {products.map((product, productIndex) => {
             const selectedVariantIndex = selectedVariants[productIndex] || 0;
             const selectedVariant = product.list_product[selectedVariantIndex];
+            const discount = selectedVariant
+              ? calculateDiscount(
+                selectedVariant.regular_price,
+                selectedVariant.sales_price
+              )
+              : 0;
 
             return (
-              <Card key={productIndex} style={styles.productCard}>
-                <View style={styles.productImageContainer}>
-                  <Image
-                    source={{
-                      uri: ApiService.getImageUrl(product.pro_image),
-                    }}
-                    style={styles.productImage}
-                    resizeMode="contain"
-                  />
+              <View key={productIndex} style={styles.productCard}>
+                {/* Horizontal Layout Container */}
+                <View style={styles.horizontalContainer}>
+
+                  {/* Left: Image */}
+                  <View style={styles.imageSection}>
+                    <View style={styles.imageContainer}>
+                      <Image
+                        source={{ uri: ApiService.getImageUrl(product.pro_image) }}
+                        style={styles.productImage}
+                        resizeMode="contain"
+                      />
+                    </View>
+                    {discount > 0 && (
+                      <View style={styles.discountBadge}>
+                        <Text style={styles.discountText}>{discount}% OFF</Text>
+                      </View>
+                    )}
+                  </View>
+
+                  {/* Right: Details */}
+                  <View style={styles.detailsSection}>
+                    <Text style={styles.productName} numberOfLines={2}>
+                      {product.eng_name}
+                    </Text>
+
+                    {selectedVariant && (
+                      <>
+                        {/* Price Row */}
+                        <View style={styles.priceRow}>
+                          <Text style={styles.currentPrice}>₹{selectedVariant.sales_price}</Text>
+                          <Text style={styles.originalPrice}>₹{selectedVariant.regular_price}</Text>
+                        </View>
+
+                        {/* Size Selector (Compact) */}
+                        {product.list_product.length > 1 && (
+                          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.sizeScroll}>
+                            {product.list_product.map((variant: any, variantIndex: number) => (
+                              <TouchableOpacity
+                                key={variant.id}
+                                onPress={() => setSelectedVariants(prev => ({ ...prev, [productIndex]: variantIndex }))}
+                                style={[
+                                  styles.sizeChip,
+                                  selectedVariantIndex === variantIndex && styles.sizeChipSelected
+                                ]}
+                              >
+                                <Text style={[
+                                  styles.sizeChipText,
+                                  selectedVariantIndex === variantIndex && styles.sizeChipTextSelected
+                                ]}>
+                                  {variant.product_size}
+                                </Text>
+                              </TouchableOpacity>
+                            ))}
+                          </ScrollView>
+                        )}
+
+                        {/* Stock Warning */}
+                        {selectedVariant.available_stock > 0 && selectedVariant.available_stock <= 5 && (
+                          <Text style={styles.stockWarningText}>Running Low: Only {selectedVariant.available_stock} left</Text>
+                        )}
+                      </>
+                    )}
+                  </View>
                 </View>
 
-                <View style={styles.productDetails}>
-                  <Text variant="titleMedium" style={styles.productName}>
-                    {product.eng_name}
-                  </Text>
+                {/* Bottom: Action Control (Full Width) */}
+                {selectedVariant && (
+                  <View style={styles.actionSection}>
+                    {selectedVariant.available_stock > 0 ? (
+                      selectedVariant.quantity > 0 ? (
+                        <View style={styles.quantityControl}>
+                          <TouchableOpacity
+                            style={styles.quantityBtn}
+                            onPress={() => updateQuantity(selectedVariant.id, Math.max(0, selectedVariant.quantity - 1))}
+                            disabled={isInputFocused[selectedVariant.id]}
+                          >
+                            <Icon name="minus" size={16} color={theme.colors.primary} />
+                          </TouchableOpacity>
 
-                  {selectedVariant && (
-                    <>
-                      <View style={styles.priceContainer}>
-                        <Text variant="titleLarge" style={styles.price}>
-                          ₹{selectedVariant.sales_price}
-                        </Text>
-                        <Text style={styles.oldPrice}>
-                          ₹{selectedVariant.regular_price}
-                        </Text>
-                        <Text style={styles.offer}>
-                          ₹{selectedVariant.offer_price} off
-                        </Text>
+                          <TextInput
+                            style={styles.quantityInput}
+                            value={localQtys[selectedVariant.id] || selectedVariant.quantity.toString()}
+                            keyboardType="numeric"
+                            onChangeText={(text) => handleQtyInputChange(selectedVariant.id, text)}
+                            onEndEditing={(e) => handleManualQuantity(selectedVariant.id, selectedVariant.quantity, e.nativeEvent.text)}
+                          />
+
+                          <TouchableOpacity
+                            style={[styles.quantityBtn, styles.quantityBtnPlus]}
+                            onPress={() => updateQuantity(selectedVariant.id, parseInt(selectedVariant.quantity.toString()) + 1)}
+                            disabled={isInputFocused[selectedVariant.id]}
+                          >
+                            <Icon name="plus" size={16} color="#fff" />
+                          </TouchableOpacity>
+                        </View>
+                      ) : (
+                        <TouchableOpacity
+                          style={styles.addToCartBtn}
+                          onPress={() => addToCart(product)}
+                        >
+                          <Text style={styles.addToCartText}>ADD TO CART</Text>
+                        </TouchableOpacity>
+                      )
+                    ) : (
+                      <View style={styles.outOfStockBtn}>
+                        <Text style={styles.outOfStockText}>OUT OF STOCK</Text>
                       </View>
-
-                      {selectedVariant.state_gst && (
-                        <Text style={styles.gst}>
-                          STATE GST - {selectedVariant.state_gst}
-                        </Text>
-                      )}
-                      {selectedVariant.central_gst && (
-                        <Text style={styles.gst}>
-                          CENTRAL GST - {selectedVariant.central_gst}
-                        </Text>
-                      )}
-
-                      <View style={styles.variantsContainer}>
-                        {product.list_product.map(
-                          (variant: any, variantIndex: number) => (
-                            <Chip
-                              key={variant.id}
-                              selected={selectedVariantIndex === variantIndex}
-                              onPress={() =>
-                                setSelectedVariants(prev => ({
-                                  ...prev,
-                                  [productIndex]: variantIndex,
-                                }))
-                              }
-                              style={styles.variantChip}
-                              showSelectedOverlay
-                              textStyle={{
-                                color:
-                                  selectedVariantIndex === variantIndex
-                                    ? theme.colors.primary
-                                    : '#666',
-                              }}
-                            >
-                              {variant.product_size}
-                            </Chip>
-                          ),
-                        )}
-                      </View>
-
-                      <View style={styles.actionContainer}>
-                        {selectedVariant.available_stock > 0 ? (
-                          selectedVariant.quantity > 0 ? (
-                            <View style={styles.quantityContainer}>
-                              <TouchableOpacity
-                                style={styles.quantityButton}
-                                onPress={() =>
-                                  updateQuantity(selectedVariant.id, -1)
-                                }
-                              >
-                                <Text style={styles.quantityButtonText}>−</Text>
-                              </TouchableOpacity>
-                              <Text style={styles.quantity}>
-                                {selectedVariant.quantity}
-                              </Text>
-                              <TouchableOpacity
-                                style={styles.quantityButton}
-                                onPress={() =>
-                                  updateQuantity(selectedVariant.id, 1)
-                                }
-                              >
-                                <Text style={styles.quantityButtonText}>+</Text>
-                              </TouchableOpacity>
-                            </View>
-                          ) : (
-                            <Button
-                              mode="contained"
-                              onPress={() => addToCart(selectedVariant.id)}
-                              style={styles.addButton}
-                              labelStyle={{ fontWeight: 'bold' }}
-                            >
-                              Add to Cart
-                            </Button>
-                          )
-                        ) : (
-                          <Text style={styles.outOfStock}>Out of Stock</Text>
-                        )}
-                      </View>
-                    </>
-                  )}
-                </View>
-              </Card>
+                    )}
+                  </View>
+                )}
+              </View>
             );
           })}
 
           {products.length === 0 && (
-            <View style={styles.emptyContainer}>
-              <Text>Products not available</Text>
+            <View style={styles.emptyState}>
+              <Icon name="package-variant" size={80} color="#ccc" />
+              <Text style={styles.emptyTitle}>No Products Found</Text>
+              <Text style={styles.emptySubtitle}>
+                Check back later for new arrivals
+              </Text>
             </View>
           )}
+
+          <View style={styles.bottomSpace} />
         </ScrollView>
       )}
-    </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#FAF9F6',
+  },
+  headerGradient: {
+    paddingBottom: 16,
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingTop: 12,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerCenter: {
+    flex: 1,
+    marginLeft: 16,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#fff',
+    letterSpacing: 0.3,
+  },
+  headerSubtitle: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.85)',
+    marginTop: 2,
+    fontWeight: '500',
+  },
+  cartButtonContainer: {
+    marginLeft: 12,
+  },
+  cartIconWrapper: {
+    position: 'relative',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cartBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    backgroundColor: '#FF3B30',
+    minWidth: 20,
+    height: 20,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 6,
+    borderWidth: 2,
+    borderColor: '#fff',
+  },
+  cartBadgeText: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '800',
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    paddingHorizontal: 40,
   },
-  content: {
+  loadingText: {
+    marginTop: 20,
+    fontSize: 16,
+    color: '#666',
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  scrollView: {
     flex: 1,
+  },
+  scrollContent: {
     padding: 16,
   },
   productCard: {
-    marginBottom: 20,
-    borderRadius: 16,
     backgroundColor: '#fff',
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    overflow: 'hidden',
+    borderRadius: 12,
+    marginBottom: 12,
+    padding: 8,
+    borderWidth: 1,
+    borderColor: '#eee',
+    elevation: 0,
   },
-  productImageContainer: {
-    width: '100%',
-    height: 220,
-    backgroundColor: '#f8f9fa',
+  horizontalContainer: {
+    flexDirection: 'row',
+  },
+  imageSection: {
+    width: 100,
+    height: 100,
+    backgroundColor: '#FAFAFA',
+    borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 16,
+    position: 'relative',
+  },
+  imageContainer: {
+    width: '100%',
+    height: '100%',
+    padding: 4,
   },
   productImage: {
     width: '100%',
     height: '100%',
   },
-  productDetails: {
-    padding: 16,
-  },
-  productName: {
-    fontWeight: '700',
-    color: '#1a1a1a',
-    fontSize: 18,
-    lineHeight: 24,
-    marginBottom: 8,
-  },
-  priceContainer: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    marginBottom: 4,
-  },
-  price: {
-    fontWeight: '800',
-    color: '#1a1a1a',
-    fontSize: 22,
-    marginRight: 10,
-  },
-  oldPrice: {
-    textDecorationLine: 'line-through',
-    color: '#999',
-    fontSize: 14,
-    marginRight: 10,
-  },
-  offer: {
-    color: '#4caf50',
-    fontWeight: '700',
-    fontSize: 14,
-  },
-  gst: {
-    fontSize: 11,
-    color: '#757575',
-    marginVertical: 1,
-    fontWeight: '500',
-  },
-  variantsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginTop: 16,
-    gap: 8,
-  },
-  variantChip: {
-    borderRadius: 8,
-    backgroundColor: '#f5f5f5',
-  },
-  actionContainer: {
-    marginTop: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  addButton: {
-    borderRadius: 12,
-    flex: 1,
-    height: 44,
-    justifyContent: 'center',
-  },
-  quantityContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f5f5f5',
-    borderRadius: 12,
-    paddingHorizontal: 4,
-  },
-  quantityButton: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  quantityButtonText: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#1a1a1a',
-  },
-  quantity: {
-    paddingHorizontal: 16,
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#b90617',
-  },
-  outOfStock: {
-    color: '#d32f2f',
-    fontWeight: '700',
-    marginTop: 12,
-    fontSize: 14,
-    backgroundColor: '#ffebee',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
-    alignSelf: 'flex-start',
-  },
-  emptyContainer: {
-    paddingVertical: 60,
-    alignItems: 'center',
-  },
-  cartButton: {
-    position: 'relative',
-    marginRight: 8,
-  },
-  badge: {
+  discountBadge: {
     position: 'absolute',
     top: 4,
-    right: 4,
-    backgroundColor: '#4caf50',
+    left: 4,
+    backgroundColor: '#FF3B30',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  discountText: {
+    color: '#fff',
+    fontSize: 9,
+    fontWeight: '700',
+  },
+  detailsSection: {
+    flex: 1,
+    paddingLeft: 12,
+    justifyContent: 'flex-start',
+  },
+  productName: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#1A1A1A',
+    marginBottom: 4,
+    lineHeight: 18,
+  },
+  priceRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    marginBottom: 6,
+    gap: 6,
+  },
+  currentPrice: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#1A1A1A',
+  },
+  originalPrice: {
+    fontSize: 12,
+    color: '#999',
+    textDecorationLine: 'line-through',
+  },
+  sizeScroll: {
+    flexGrow: 0,
+    marginBottom: 6,
+  },
+  sizeChip: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    backgroundColor: '#F5F5F5',
+    marginRight: 6,
+    borderWidth: 1,
+    borderColor: '#eee',
+  },
+  sizeChipSelected: {
+    backgroundColor: '#5D4037',
+    borderColor: '#5D4037',
+  },
+  sizeChipText: {
+    fontSize: 11,
+    color: '#666',
+    fontWeight: '600',
+  },
+  sizeChipTextSelected: {
+    color: '#fff',
+  },
+  stockWarningText: {
     fontSize: 10,
-    height: 18,
-    minWidth: 18,
+    color: '#F57C00',
+    fontWeight: '600',
+  },
+  actionSection: {
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#f5f5f5',
+  },
+  quantityControl: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F8F9FA',
+    borderRadius: 8,
+    padding: 2,
+    height: 36,
+  },
+  quantityBtn: {
+    width: 32,
+    height: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#eee',
+  },
+  quantityBtnPlus: {
+    backgroundColor: '#5D4037',
+    borderColor: '#5D4037',
+  },
+  quantityInput: {
+    flex: 1,
+    textAlign: 'center',
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#333',
+    padding: 0,
+    height: '100%',
+  },
+  addToCartBtn: {
+    backgroundColor: '#5D4037',
+    paddingVertical: 8,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  addToCartText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 13,
+    letterSpacing: 0.5,
+  },
+  outOfStockBtn: {
+    backgroundColor: '#FFEBEE',
+    paddingVertical: 8,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  outOfStockText: {
+    color: '#D32F2F',
+    fontWeight: '700',
+    fontSize: 12,
+  },
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 60,
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#666',
+    marginTop: 12,
+  },
+  emptySubtitle: {
+    fontSize: 14,
+    color: '#999',
+  },
+  bottomSpace: {
+    height: 20,
   },
 });
 

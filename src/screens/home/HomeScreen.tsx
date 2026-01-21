@@ -10,17 +10,15 @@ import {
   Animated,
   Easing,
   FlatList,
-  
+  TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
-  Appbar,
   Searchbar,
-  Card,
   Text,
   ActivityIndicator,
-  Badge,
   useTheme,
+  IconButton,
 } from 'react-native-paper';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/AppNavigator';
@@ -32,11 +30,12 @@ import { StorageService } from '../../utils/storage';
 import CameraService from '../../services/camera.service';
 import Toast from 'react-native-toast-message';
 import { BASE_URL } from '../../services/api';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import LinearGradient from 'react-native-linear-gradient';
+
 type Props = NativeStackScreenProps<RootStackParamList, 'Home'>;
 
-const { width, height } = Dimensions.get('window');
+const { width } = Dimensions.get('window');
 
 const HomeScreen: React.FC<Props> = ({ navigation }) => {
   const theme = useTheme();
@@ -50,20 +49,68 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
   const [categories, setCategories] = useState<any[]>([]);
   const [featuredProducts, setFeaturedProducts] = useState<any[]>([]);
   const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
-
   const [userId, setUserId] = useState<number>(1);
   const [selectedVariants, setSelectedVariants] = useState<{ [key: number]: number }>({});
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [featuredSubCatId, setFeaturedSubCatId] = useState<number | null>(null);
+  const [localQtys, setLocalQtys] = useState<{ [key: number]: string }>({});
+  const [isInputFocused, setIsInputFocused] = useState<{ [key: number]: boolean }>({});
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
+  const scaleAnim = useRef(new Animated.Value(0.9)).current;
+  const categoryAnim = useRef(new Animated.Value(0)).current;
+  const productAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    loadUserData();
-    loadHomeData();
-    loadCartCount();
-    loadUserId();
+    const unsubscribe = navigation.addListener('focus', () => {
+      loadUserData();
+      loadHomeData();
+      loadCartCount();
+      loadUserId();
+    });
+
     startAnimations();
-  }, []);
+    return unsubscribe;
+  }, [navigation]);
+
+  useEffect(() => {
+    if (isSearchFocused) {
+      const delayDebounceFn = setTimeout(() => {
+        if (searchQuery.trim()) {
+          performSearch();
+        } else {
+          setSearchResults(featuredProducts);
+        }
+      }, 300);
+      return () => clearTimeout(delayDebounceFn);
+    }
+  }, [searchQuery, isSearchFocused]);
+
+  const performSearch = async () => {
+    setIsSearching(true);
+    try {
+      const response = await ProductService.searchProducts(searchQuery, userId);
+      if (response.status === 1 && response.products) {
+        setSearchResults(response.products);
+      } else {
+        setSearchResults([]);
+      }
+    } catch (error: any) {
+      console.error('Search error:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Search Failed',
+        text2: error?.response?.status === 404
+          ? 'Search endpoint not found (404)'
+          : 'Could not connect to search service',
+      });
+    } finally {
+      setIsSearching(false);
+    }
+  };
 
   const loadUserId = async () => {
     const id = await StorageService.getItem('user_id');
@@ -85,6 +132,16 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
 
     if (!selectedVariant) return;
 
+    // Check if already in cart
+    if (selectedVariant.quantity > 0) {
+      Toast.show({
+        type: 'info',
+        text1: 'Already in Cart',
+        text2: 'Please update the quantity directly',
+      });
+      return;
+    }
+
     try {
       await CartService.addToCart({
         user_id: userId,
@@ -93,10 +150,11 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
       });
 
       await loadCartCount();
+      await loadHomeData(); // Refresh to get updated quantities
       Toast.show({
         type: 'success',
-        text1: 'Success',
-        text2: 'Item added to cart',
+        text1: '✓ Added to Cart',
+        text2: 'Item successfully added',
       });
     } catch (error) {
       Toast.show({
@@ -105,6 +163,42 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
         text2: 'Failed to add item to cart',
       });
     }
+  };
+
+  const updateQuantity = async (productId: number, absoluteQty: number) => {
+    if (!userId) return;
+
+    // Prevent negative quantities
+    if (absoluteQty < 0) return;
+
+    try {
+      await CartService.addToCart({
+        user_id: userId,
+        product_id: productId,
+        quantity: absoluteQty,
+      });
+      await loadHomeData(); // Refresh quantities
+      await loadCartCount();
+    } catch (error) {
+      console.error('Error updating quantity:', error);
+    }
+  };
+
+  const handleManualQuantity = async (productId: number, currentQty: number, newQtyString: string) => {
+    const newQty = parseInt(newQtyString);
+    if (!isNaN(newQty) && newQty >= 0) {
+      if (newQty !== currentQty) {
+        await updateQuantity(productId, newQty);
+      } else {
+        setLocalQtys(prev => ({ ...prev, [productId]: currentQty.toString() }));
+      }
+    }
+  };
+
+  const handleQtyInputChange = (productId: number, text: string) => {
+    // Only allow numeric input
+    const cleanText = text.replace(/[^0-9]/g, '');
+    setLocalQtys(prev => ({ ...prev, [productId]: cleanText }));
   };
 
   useEffect(() => {
@@ -117,17 +211,33 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
   }, [banners]);
 
   const startAnimations = () => {
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
+    Animated.stagger(100, [
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+        Animated.timing(slideAnim, {
+          toValue: 0,
+          duration: 800,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+        Animated.timing(scaleAnim, {
+          toValue: 1,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+      ]),
+      Animated.timing(categoryAnim, {
         toValue: 1,
-        duration: 800,
-        easing: Easing.out(Easing.cubic),
+        duration: 600,
         useNativeDriver: true,
       }),
-      Animated.timing(slideAnim, {
-        toValue: 0,
+      Animated.timing(productAnim, {
+        toValue: 1,
         duration: 600,
-        easing: Easing.out(Easing.cubic),
         useNativeDriver: true,
       }),
     ]).start();
@@ -171,54 +281,26 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
       }
 
       if (featuredRes.status === 1 && featuredRes.products) {
-        // Take only first 6 featured products
-        console.log('Featured products loaded:', featuredRes.products.length);
         setFeaturedProducts(featuredRes.products.slice(0, 6));
-      } else {
-        console.log('No featured products found, using fallback');
-        // Fallback with sample products for demo
-        const sampleProducts = [
-          {
-            id: 1,
-            eng_name: 'Fresh Tomatoes',
-            pro_image: 'sample/tomatoes.jpg',
-            list_product: [{
-              id: 1,
-              product_size: '1 kg',
-              sales_price: 40,
-              regular_price: 50,
-              available_stock: 10,
-            }]
-          },
-          {
-            id: 2,
-            eng_name: 'Organic Rice',
-            pro_image: 'sample/rice.jpg',
-            list_product: [{
-              id: 2,
-              product_size: '5 kg',
-              sales_price: 280,
-              regular_price: 320,
-              available_stock: 5,
-            }]
-          },
-          {
-            id: 3,
-            eng_name: 'Fresh Milk',
-            pro_image: 'sample/milk.jpg',
-            list_product: [{
-              id: 3,
-              product_size: '1 L',
-              sales_price: 65,
-              regular_price: 70,
-              available_stock: 15,
-            }]
-          }
-        ];
-        setFeaturedProducts(sampleProducts);
+        if (featuredRes.subcategoryId) setFeaturedSubCatId(featuredRes.subcategoryId);
+
+        // Sync local quantities
+        const qtyMap: { [key: number]: string } = {};
+        featuredRes.products.slice(0, 6).forEach((p: any) => {
+          const variant = p.list_product?.[selectedVariants[p.id] || 0];
+          if (variant) qtyMap[variant.id] = (variant.quantity || 0).toString();
+        });
+        setLocalQtys(prev => ({ ...prev, ...qtyMap }));
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error loading home data:', error);
+      if (error?.response?.status === 404) {
+        Toast.show({
+          type: 'error',
+          text1: 'Data Not Found',
+          text2: 'Some home screen data could not be loaded (404).',
+        });
+      }
     } finally {
       setLoading(false);
     }
@@ -260,73 +342,186 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
     }
   };
 
-  const handleLogout = async () => {
-    await AuthService.logout();
-    navigation.replace('Login');
+  const calculateDiscount = (regular: number, sales: number) => {
+    return Math.round(((regular - sales) / regular) * 100);
   };
 
-  if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={theme.colors.primary} />
-      </View>
-    );
-  }
+  const mainContent = (
+    <View style={styles.container}>
+      {/* Modern Header */}
+      <LinearGradient
+        colors={[theme.colors.primary, '#5D4037']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.headerGradient}
+      >
+        <SafeAreaView edges={['top']}>
+          <View style={styles.headerContent}>
+            <View style={styles.headerLeft}>
+              <Text style={styles.appName}>ROUTE GADI</Text>
+              <Text style={styles.appTagline}>Grocery Store</Text>
+            </View>
 
-  return (
-    
-    <SafeAreaView
-      style={[styles.container, { backgroundColor: theme.colors.background }]}
-      edges={['top', 'left', 'right', 'bottom']}
-    >
-     
-      <Appbar.Header style={{ backgroundColor: theme.colors.primary, elevation: 0 }}>
-        <Appbar.Content title="Routegadi" titleStyle={{ color: '#fff', fontWeight: '700' }} />
-        <TouchableOpacity onPress={() => navigation.navigate('Cart')}>
-          <View style={styles.cartButton}>
-            <Appbar.Action icon="cart" color={theme.colors.onSurfaceVariant} iconColor='#fff'/>
-            {cartCount > 0 && <Badge style={[styles.badge, { backgroundColor: theme.colors.error }]}>{cartCount}</Badge>}
+            <TouchableOpacity
+              onPress={() => navigation.navigate('Cart')}
+              style={styles.cartButton}
+            >
+              <View style={styles.cartIconWrapper}>
+                <Icon name="cart-outline" size={26} color="#fff" />
+                {cartCount > 0 && (
+                  <View style={styles.cartBadge}>
+                    <Text style={styles.cartBadgeText}>{cartCount}</Text>
+                  </View>
+                )}
+              </View>
+            </TouchableOpacity>
           </View>
-        </TouchableOpacity>
-      </Appbar.Header>
-     <LinearGradient colors={[theme.colors.primary, theme.colors.background]} style={styles.gradient}>
+
+          {/* Search Bar */}
+          <View style={styles.searchSection}>
+            <Searchbar
+              placeholder="Search for products..."
+              onChangeText={setSearchQuery}
+              value={searchQuery}
+              onFocus={() => {
+                setIsSearchFocused(true);
+                if (!searchQuery) setSearchResults(featuredProducts);
+              }}
+              onSubmitEditing={() => {
+                if (searchQuery.trim()) {
+                  setIsSearchFocused(false);
+                  navigation.navigate('Product', { searchQuery: searchQuery.trim() });
+                }
+              }}
+              onIconPress={() => {
+                if (searchQuery.trim()) {
+                  setIsSearchFocused(false);
+                  navigation.navigate('Product', { searchQuery: searchQuery.trim() });
+                }
+              }}
+              style={styles.searchBar}
+              iconColor="#666"
+              inputStyle={styles.searchInput}
+              placeholderTextColor="#999"
+              icon="magnify"
+              right={() => (
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  {searchQuery.length > 0 && (
+                    <IconButton
+                      icon="close"
+                      size={20}
+                      onPress={() => {
+                        setSearchQuery('');
+                        setSearchResults(featuredProducts);
+                      }}
+                    />
+                  )}
+                  <IconButton
+                    icon="magnify"
+                    size={24}
+                    iconColor={theme.colors.primary}
+                    onPress={() => {
+                      if (searchQuery.trim()) {
+                        setIsSearchFocused(false);
+                        navigation.navigate('Product', { searchQuery: searchQuery.trim() });
+                      }
+                    }}
+                  />
+                </View>
+              )}
+            />
+          </View>
+        </SafeAreaView>
+      </LinearGradient>
+
+      {/* Search Results Overlay */}
+      {isSearchFocused && (
+        <View style={styles.searchResultsOverlay}>
+          <TouchableOpacity
+            style={styles.overlayBackdrop}
+            activeOpacity={1}
+            onPress={() => setIsSearchFocused(false)}
+          />
+          <View style={styles.resultsContainer}>
+            <View style={styles.resultsHeader}>
+              <Text style={styles.resultsTitle}>
+                {searchQuery ? 'Search results' : 'Available products'}
+              </Text>
+              <TouchableOpacity onPress={() => setIsSearchFocused(false)}>
+                <Text style={styles.closeBtn}>Close</Text>
+              </TouchableOpacity>
+            </View>
+
+            {isSearching ? (
+              <ActivityIndicator style={{ padding: 20 }} color={theme.colors.primary} />
+            ) : (
+              <FlatList
+                data={searchResults}
+                keyExtractor={(item, index) => item.id?.toString() || index.toString()}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    style={styles.searchResultItem}
+                    onPress={() => {
+                      setIsSearchFocused(false);
+                      // Navigate to Product screen with the search query
+                      navigation.navigate('Product', {
+                        product: item
+                      });
+                    }}
+                  >
+                    <Image
+                      source={{ uri: ApiService.getImageUrl(item.pro_image) }}
+                      style={styles.resultImage}
+                    />
+                    <View style={styles.resultDetails}>
+                      <Text style={styles.resultName} numberOfLines={1}>{item.eng_name}</Text>
+                      <Text style={styles.resultPrice}>₹{item.list_product?.[0]?.sales_price || '0'}</Text>
+                    </View>
+                    <Icon name="chevron-right" size={20} color="#ccc" />
+                  </TouchableOpacity>
+                )}
+                ListEmptyComponent={
+                  <View style={styles.emptyResults}>
+                    <Text style={styles.emptyResultsText}>No products found</Text>
+                  </View>
+                }
+                style={{ maxHeight: Dimensions.get('window').height * 0.5 }}
+                keyboardShouldPersistTaps="handled"
+              />
+            )}
+          </View>
+        </View>
+      )}
+
       <ScrollView
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
-        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        style={styles.scrollView}
+        keyboardShouldPersistTaps="handled"
       >
-        <View style={[styles.header, { backgroundColor: theme.colors.surface }]}>
-          <View style={styles.welcomeContainer}>
-            {/* <Text style={[styles.welcomeText, { color: theme.colors.onSurface }]}>
-              Good morning{userName && userType !== '3' ? `, ${userName}` : ''}!
-            </Text> */}
-            <Text style={[styles.subtitleText, { color: theme.colors.onSurfaceVariant }]}>
-              What would you like to order today?
-            </Text>
-          </View>
-
-          <View style={styles.searchContainer}>
-            <Searchbar
-              placeholder="Search for groceries, brands..."
-              onChangeText={setSearchQuery}
-              value={searchQuery}
-              style={[styles.searchBar, { backgroundColor: theme.colors.surfaceVariant }]}
-              iconColor={theme.colors.onSurfaceVariant}
-              inputStyle={{ color: theme.colors.onSurface }}
-              theme={{ colors: { primary: theme.colors.primary } }}
-            />
-          </View>
-        </View>
-
+        {/* Banner Carousel */}
         {banners.length > 0 && (
-          <View style={[styles.bannerContainer, { marginTop: 30 }]}>
+          <Animated.View
+            style={[
+              styles.bannerSection,
+              {
+                opacity: fadeAnim,
+                transform: [{ translateY: slideAnim }, { scale: scaleAnim }],
+              },
+            ]}
+          >
             <Image
               source={{ uri: `${BASE_URL}${banners[currentBannerIndex]}` }}
               style={styles.bannerImage}
-              resizeMode="cover"
+              resizeMode="stretch"
             />
-            <View style={styles.indicators}>
+            <LinearGradient
+              colors={['transparent', 'rgba(0,0,0,0.4)']}
+              style={StyleSheet.absoluteFillObject}
+            />
+            <View style={styles.bannerIndicators}>
               {banners.map((_, index) => (
                 <View
                   key={index}
@@ -337,468 +532,651 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
                 />
               ))}
             </View>
-          </View>
+          </Animated.View>
         )}
 
-        {loading ? (
-          <View style={[styles.sectionContainer, { marginTop: 15 }]}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Featured Products</Text>
-            </View>
-            <FlatList
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.featuredProductsContainer}
-              data={[1, 2, 3]}
-              renderItem={({  }) => (
-                <View style={styles.featuredProductCard}>
-                  <View style={styles.featuredProductTouchable}>
-                    <View style={[styles.featuredProductImageContainer, styles.loadingShimmer]} />
-                    <View style={styles.featuredProductDetails}>
-                      <View style={[styles.loadingShimmer, { height: 16, marginBottom: 8, borderRadius: 4 }]} />
-                      <View style={[styles.loadingShimmer, { height: 14, width: '60%', borderRadius: 4 }]} />
-                    </View>
-                  </View>
-                </View>
-              )}
-              keyExtractor={(item) => item.toString()}
-            />
+        {/* Quick Actions */}
+        <Animated.View
+          style={[
+            styles.quickActionsSection,
+            { opacity: categoryAnim, transform: [{ translateY: slideAnim }] }
+          ]}
+        >
+          <TouchableOpacity
+            style={styles.quickActionCard}
+            onPress={handleUploadList}
+          >
+            <LinearGradient
+              colors={['#E8F5E9', '#C8E6C9']}
+              style={styles.quickActionGradient}
+            >
+              <View style={[styles.quickActionIcon, { backgroundColor: '#4CAF50' }]}>
+                <Icon name="camera" size={24} color="#fff" />
+              </View>
+              <Text style={styles.quickActionText}>Upload List</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.quickActionCard}
+            onPress={() => navigation.navigate('MyOrders')}
+          >
+            <LinearGradient
+              colors={['#E3F2FD', '#BBDEFB']}
+              style={styles.quickActionGradient}
+            >
+              <View style={[styles.quickActionIcon, { backgroundColor: '#2196F3' }]}>
+                <Icon name="package-variant" size={24} color="#fff" />
+              </View>
+              <Text style={styles.quickActionText}>My Orders</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.quickActionCard}
+            onPress={() => navigation.navigate('Profile')}
+          >
+            <LinearGradient
+              colors={['#FFF3E0', '#FFE0B2']}
+              style={styles.quickActionGradient}
+            >
+              <View style={[styles.quickActionIcon, { backgroundColor: '#FF9800' }]}>
+                <Icon name="account" size={24} color="#fff" />
+              </View>
+              <Text style={styles.quickActionText}>Profile</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        </Animated.View>
+
+        {/* Categories */}
+        <Animated.View
+          style={[
+            styles.section,
+            { opacity: categoryAnim, transform: [{ translateX: slideAnim }] }
+          ]}
+        >
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Shop by Category</Text>
+            <TouchableOpacity
+              onPress={() => navigation.navigate('Categories')}
+            >
+              <Text style={styles.viewAllText}>View All</Text>
+            </TouchableOpacity>
           </View>
-        ) : featuredProducts.length > 0 ? (
-          <View style={[styles.sectionContainer, { marginTop: 15 }]}>
-            <View style={styles.sectionHeader}>
-              <Text style={[styles.sectionTitle, { color: theme.colors.onSurface }]}>Featured Products</Text>
+
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.categoriesScroll}
+          >
+            {categories.map(category => (
               <TouchableOpacity
+                key={category.id}
+                style={styles.categoryCard}
                 onPress={() =>
                   navigation.navigate('SubCategory', {
-                    categoryId: categories[0]?.id || 1,
-                    categoryName: categories[0]?.name || 'Products',
+                    categoryId: category.id,
+                    categoryName: category.name,
                   })
                 }
               >
-                <Text style={[styles.viewAllText, { color: theme.colors.primary }]}>View All</Text>
+                <LinearGradient
+                  colors={['#FFFFFF', '#F5F5F5']}
+                  style={styles.categoryImageContainer}
+                >
+                  {category.image && ApiService.getImageUrl(category.image) ? (
+                    <Image
+                      source={{
+                        uri: ApiService.getImageUrl(category.image),
+                      }}
+                      style={styles.categoryImage}
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <View style={styles.categoryPlaceholder}>
+                      <Text style={styles.categoryPlaceholderText}>
+                        {category.name.charAt(0).toUpperCase()}
+                      </Text>
+                    </View>
+                  )}
+                </LinearGradient>
+                <Text style={styles.categoryName} numberOfLines={2}>
+                  {category.name}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </Animated.View>
+
+        {/* Featured Products */}
+        {featuredProducts.length > 0 && (
+          <Animated.View
+            style={[
+              styles.section,
+              { opacity: productAnim, transform: [{ translateY: slideAnim }] }
+            ]}
+          >
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Featured Products</Text>
+              <TouchableOpacity
+                onPress={() => {
+                  if (featuredSubCatId) {
+                    navigation.navigate('Product', {
+                      subcategoryId: featuredSubCatId,
+                      subcategoryName: 'Featured Products',
+                    });
+                  } else {
+                    navigation.navigate('Categories');
+                  }
+                }}
+              >
+                <Text style={styles.viewAllText}>View All</Text>
               </TouchableOpacity>
             </View>
 
             <Animated.FlatList
               horizontal
               showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.featuredProductsContainer}
-              style={[
-                {
-                  opacity: fadeAnim,
-                  transform: [{ translateY: slideAnim }],
-                },
-              ]}
+              contentContainerStyle={styles.productsScroll}
+              style={{ opacity: productAnim }}
               data={featuredProducts}
-              renderItem={({ item: product, index }) => {
+              renderItem={({ item: product }) => {
                 const selectedVariantIndex = selectedVariants[product.id] || 0;
                 const selectedVariant = product.list_product?.[selectedVariantIndex];
-                const hasMultipleVariants = product.list_product && product.list_product.length > 1;
+                const discount = selectedVariant
+                  ? calculateDiscount(
+                    selectedVariant.regular_price,
+                    selectedVariant.sales_price
+                  )
+                  : 0;
 
                 return (
-                  <View style={[styles.featuredProductCard, { backgroundColor: '#e8f5e8' }]}>
+                  <LinearGradient
+                    colors={['#FFFFFF', '#FAFAFA']}
+                    style={styles.productCard}
+                  >
                     <TouchableOpacity
-                      style={styles.featuredProductTouchable}
-                      onPress={() =>
-                        navigation.navigate('SubCategory', {
-                          categoryId: categories[0]?.id || 1,
-                          categoryName: categories[0]?.name || 'Products',
-                        })
-                      }
+                      onPress={() => {
+                        navigation.navigate('Product', {
+                          product: product,
+                        });
+                      }}
                     >
-                      <View style={styles.featuredProductImageContainer}>
+                      <View style={styles.productImageContainer}>
                         <Image
                           source={{
                             uri: ApiService.getImageUrl(product.pro_image),
                           }}
-                          style={styles.featuredProductImage}
-                          resizeMode="cover"
-                          onLoadStart={() => {/* Could add loading state */}}
-                          onError={(error) => {
-                            console.log('Image load error:', error.nativeEvent.error);
-                          }}
+                          style={styles.productImage}
+                          resizeMode="contain"
                         />
+                        {discount > 0 && (
+                          <View style={styles.discountBadge}>
+                            <Text style={styles.discountText}>{discount}%</Text>
+                            <Text style={styles.discountOff}>OFF</Text>
+                          </View>
+                        )}
                         {selectedVariant?.available_stock === 0 && (
                           <View style={styles.outOfStockOverlay}>
                             <Text style={styles.outOfStockText}>Out of Stock</Text>
                           </View>
                         )}
                       </View>
-                      <View style={styles.featuredProductDetails}>
-                        <Text
-                          style={[styles.featuredProductName, { color: theme.colors.onSurface }]}
-                          numberOfLines={2}
-                        >
+
+                      <View style={styles.productDetails}>
+                        <Text style={styles.productName} numberOfLines={2}>
                           {product.eng_name}
                         </Text>
 
-                        {hasMultipleVariants && (
-                          <TouchableOpacity
-                            style={styles.variantSelector}
-                            onPress={() => {
-                              const nextVariant = (selectedVariantIndex + 1) % product.list_product.length;
-                              setSelectedVariants(prev => ({
-                                ...prev,
-                                [product.id]: nextVariant,
-                              }));
-                            }}
-                          >
-                            <Text style={[styles.variantText, { color: theme.colors.onSurfaceVariant }]}>
-                              {selectedVariant?.product_size || 'Select Size'}
-                            </Text>
-                            <MaterialCommunityIcons
-                              name="chevron-down"
-                              size={16}
-                              color="#718096"
-
-                            />
-                          </TouchableOpacity>
-                        )}
-
                         {selectedVariant && (
-                          <View style={styles.featuredPriceContainer}>
-                            <Text style={[styles.featuredPrice, { color: theme.colors.primary }]}>
-                              ₹{selectedVariant.sales_price}
-                            </Text>
-                            {selectedVariant.regular_price !== selectedVariant.sales_price && (
-                              <Text style={[styles.featuredOldPrice, { color: theme.colors.onSurfaceVariant }]}>
-                                ₹{selectedVariant.regular_price}
+                          <>
+                            <View style={styles.priceRow}>
+                              <Text style={styles.currentPrice}>
+                                ₹{selectedVariant.sales_price}
                               </Text>
+                              {selectedVariant.regular_price !== selectedVariant.sales_price && (
+                                <Text style={styles.originalPrice}>
+                                  ₹{selectedVariant.regular_price}
+                                </Text>
+                              )}
+                            </View>
+
+                            {product.list_product && product.list_product.length > 1 && (
+                              <TouchableOpacity
+                                style={styles.sizeSelector}
+                                onPress={() => {
+                                  const nextVariant = (selectedVariantIndex + 1) % product.list_product.length;
+                                  setSelectedVariants(prev => ({
+                                    ...prev,
+                                    [product.id]: nextVariant,
+                                  }));
+                                }}
+                              >
+                                <Text style={styles.sizeText}>
+                                  {selectedVariant?.product_size || 'Select'}
+                                </Text>
+                                <Icon name="chevron-down" size={14} color="#666" />
+                              </TouchableOpacity>
                             )}
-                          </View>
+                          </>
                         )}
                       </View>
                     </TouchableOpacity>
 
                     {selectedVariant && selectedVariant.available_stock > 0 && (
-                      <TouchableOpacity
-                        style={styles.addToCartButton}
-                        onPress={() => addToCart(product)}
-                      >
-                        <MaterialCommunityIcons
-                          name="cart-plus"
-                          size={20}
-                          color="#fff"
-                        />
-                        {/* <Text style={styles.addToCartText}>Add</Text> */}
-                      </TouchableOpacity>
+                      <View style={styles.featuredActionContainer}>
+                        {selectedVariant.quantity > 0 ? (
+                          <View style={styles.homeQuantityControl}>
+                            <TouchableOpacity
+                              onPress={() => updateQuantity(selectedVariant.id, Math.max(0, selectedVariant.quantity - 1))}
+                              style={[styles.homeQuantityBtn, isInputFocused[selectedVariant.id] && { opacity: 0.5 }]}
+                              disabled={isInputFocused[selectedVariant.id]}
+                            >
+                              <Icon name="minus" size={14} color={theme.colors.primary} />
+                            </TouchableOpacity>
+                            <TextInput
+                              style={styles.homeQuantityInput}
+                              value={localQtys[selectedVariant.id] || selectedVariant.quantity.toString()}
+                              keyboardType="numeric"
+                              onChangeText={(text) => handleQtyInputChange(selectedVariant.id, text)}
+                              onFocus={() => setIsInputFocused(prev => ({ ...prev, [selectedVariant.id]: true }))}
+                              onBlur={() => setIsInputFocused(prev => ({ ...prev, [selectedVariant.id]: false }))}
+                              onEndEditing={(e) => handleManualQuantity(selectedVariant.id, selectedVariant.quantity, e.nativeEvent.text)}
+                              selectTextOnFocus={true}
+                            />
+                            <TouchableOpacity
+                              onPress={() => updateQuantity(selectedVariant.id, selectedVariant.quantity + 1)}
+                              style={[styles.homeQuantityBtn, styles.homeQuantityBtnPlus, isInputFocused[selectedVariant.id] && { opacity: 0.5 }]}
+                              disabled={isInputFocused[selectedVariant.id]}
+                            >
+                              <Icon name="plus" size={14} color="#fff" />
+                            </TouchableOpacity>
+                          </View>
+                        ) : (
+                          <TouchableOpacity
+                            style={styles.addButton}
+                            onPress={() => addToCart(product)}
+                          >
+                            <LinearGradient
+                              colors={[theme.colors.primary, '#6D4C41']}
+                              style={styles.addButtonGradient}
+                            >
+                              <Icon name="plus" size={18} color="#fff" />
+                            </LinearGradient>
+                          </TouchableOpacity>
+                        )}
+                      </View>
                     )}
-                  </View>
+                  </LinearGradient>
                 );
               }}
               keyExtractor={(item, index) => item.id?.toString() || index.toString()}
             />
-          </View>
-        ) : !loading && (
-          <View style={[styles.sectionContainer, { marginTop: 15 }]}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Featured Products</Text>
-            </View>
-            <View style={styles.emptyProductsContainer}>
-              <MaterialCommunityIcons
-                name="package-variant"
-                size={48}
-                color="#cbd5e0"
-              />
-              <Text style={[styles.emptyProductsText, { color: theme.colors.onSurfaceVariant }]}>No featured products available</Text>
-            </View>
-          </View>
+          </Animated.View>
         )}
 
-        <View style={[styles.sectionContainer, { marginTop: 15 }]}>
-          <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: theme.colors.onSurface }]}>Shop by Category</Text>
-            <TouchableOpacity
-              onPress={() =>
-                navigation.navigate('SubCategory', {
-                  categoryId: categories[0]?.id || 1,
-                  categoryName: categories[0]?.name || 'All Categories',
-                })
-              }
-            >
-              <Text style={[styles.viewAllText, { color: theme.colors.primary }]}>View All</Text>
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.categoriesContainer}>
-            <View style={styles.categoriesGrid}>
-              {categories.map(category => (
-                <TouchableOpacity
-                  key={category.id}
-                  style={[styles.categoryCard, { backgroundColor: '#f0f9ff' }]}
-                  onPress={() =>
-                    navigation.navigate('SubCategory', {
-                      categoryId: category.id,
-                      categoryName: category.name,
-                    })
-                  }
-                >
-                  <View style={styles.categoryImageContainer}>
-                    {category.image && ApiService.getImageUrl(category.image) ? (
-                      <Image
-                        source={{
-                          uri: ApiService.getImageUrl(category.image),
-                        }}
-                        style={styles.categoryImage}
-                        resizeMode="contain"
-                      />
-                    ) : (
-                      <View
-                        style={{
-                          width: 40,
-                          height: 40,
-                          borderRadius: 20,
-                          backgroundColor: '#cbd5e0',
-                          justifyContent: 'center',
-                          alignItems: 'center',
-                        }}
-                      >
-                        <Text style={{ color: '#fff', fontSize: 16, fontWeight: 'bold' }}>
-                          {category.name.charAt(0).toUpperCase()}
-                        </Text>
-                      </View>
-                    )}
-                  </View>
-                  <Text style={[styles.categoryName, { color: theme.colors.onSurface }]} numberOfLines={2}>
-                    {category.name}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-        </View>
-
-        <View style={[styles.sectionContainer, { marginTop: 15 }]}>
-          <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: theme.colors.onSurface }]}>Quick Actions</Text>
-          </View>
-
-          <View style={styles.quickActionsContainer}>
-            <View style={styles.quickActionsGrid}>
-              <TouchableOpacity style={[styles.quickActionCard, { backgroundColor: '#e6fffa' }]} onPress={handleUploadList}>
-                <View style={styles.quickActionTouchable}>
-                  <View style={[styles.quickActionIconContainer, { backgroundColor: '#e6fffa' }]}>
-                    <Image
-                      source={require('../../../cordova-source/img/list.png')}
-                      style={{ width: 24, height: 24 }}
-                    />
-                  </View>
-                  <Text style={[styles.quickActionTitle, { color: theme.colors.onSurface }]}>Upload List</Text>
-                  <Text style={[styles.quickActionSubtitle, { color: theme.colors.onSurfaceVariant }]}>Camera/Gallery</Text>
-                </View>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.quickActionCard, { backgroundColor: '#ebf8ff' }]}
-                onPress={() => navigation.navigate('MyOrders')}
-              >
-                <View style={styles.quickActionTouchable}>
-                  <View style={[styles.quickActionIconContainer, { backgroundColor: '#ebf8ff' }]}>
-                    <MaterialCommunityIcons
-                      name="shopping-outline"
-                      size={24}
-                      color="#3182ce"
-                    />
-                  </View>
-                  <Text style={[styles.quickActionTitle, { color: theme.colors.onSurface }]}>My Orders</Text>
-                  <Text style={[styles.quickActionSubtitle, { color: theme.colors.onSurfaceVariant }]}>Reorder/Return</Text>
-                </View>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.quickActionCard, { backgroundColor: '#f0fff4' }]}
-                onPress={() => navigation.navigate('Profile')}
-              >
-                <View style={styles.quickActionTouchable}>
-                  <View style={[styles.quickActionIconContainer, { backgroundColor: '#f0fff4' }]}>
-                    <MaterialCommunityIcons
-                      name="account-outline"
-                      size={24}
-                      color="#38a169"
-                    />
-                  </View>
-                  <Text style={[styles.quickActionTitle, { color: theme.colors.onSurface }]}>Profile</Text>
-                  <Text style={[styles.quickActionSubtitle, { color: theme.colors.onSurfaceVariant }]}>Manage Account</Text>
-                </View>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
+        <View style={styles.bottomSpace} />
       </ScrollView>
-      </LinearGradient>
-      <View style={[styles.bottomNav, { backgroundColor: theme.colors.surface, borderTopColor: theme.colors.outline }]}>
+
+      {/* Bottom Navigation */}
+      <View style={styles.bottomNav}>
         <TouchableOpacity
           style={styles.navItem}
           onPress={() => navigation.navigate('Home')}
         >
-          <Appbar.Action icon="home" color={theme.colors.primary} />
+          <Icon name="home" size={26} color={theme.colors.primary} />
+          <Text style={[styles.navText, { color: theme.colors.primary }]}>Home</Text>
         </TouchableOpacity>
+
         <TouchableOpacity
           style={styles.navItem}
           onPress={() => navigation.navigate('Cart')}
         >
-          <View>
-            <Appbar.Action icon="cart" color={theme.colors.onSurfaceVariant} />
-            {cartCount > 0 && <Badge style={[styles.badge, { top: 0, right: 0, backgroundColor: theme.colors.error }]}>{cartCount}</Badge>}
+          <View style={styles.navIconWrapper}>
+            <Icon name="cart-outline" size={26} color="#666" />
+            {cartCount > 0 && (
+              <View style={styles.navBadge}>
+                <Text style={styles.navBadgeText}>{cartCount}</Text>
+              </View>
+            )}
           </View>
+          <Text style={styles.navText}>Cart</Text>
         </TouchableOpacity>
+
         <TouchableOpacity
           style={styles.navItem}
           onPress={() => navigation.navigate('MyOrders')}
         >
-          <Appbar.Action icon="shopping" color={theme.colors.onSurfaceVariant} />
+          <Icon name="package-variant" size={26} color="#666" />
+          <Text style={styles.navText}>Orders</Text>
         </TouchableOpacity>
+
         <TouchableOpacity
           style={styles.navItem}
           onPress={() => navigation.navigate('Settings')}
         >
-          <Appbar.Action icon="cog" color={theme.colors.onSurfaceVariant} />
+          <Icon name="cog-outline" size={26} color="#666" />
+          <Text style={styles.navText}>Settings</Text>
         </TouchableOpacity>
       </View>
-  
-    </SafeAreaView>
+    </View>
   );
+
+  return loading ? (
+    <View style={styles.loadingContainer}>
+      <ActivityIndicator size="large" color={theme.colors.primary} />
+      <Text style={styles.loadingText}>Loading...</Text>
+    </View>
+  ) : mainContent;
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f7fa',
-  },
-  scrollContent: {
-    paddingBottom: 80,
+    backgroundColor: '#FAF9F6',
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f5f7fa',
+    backgroundColor: '#FAF9F6',
   },
-  header: {
-    backgroundColor: '#fff',
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#666',
+    fontWeight: '600',
+  },
+  headerGradient: {
+    paddingBottom: 10,
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingTop: 8,
+  },
+  headerLeft: {
+    flex: 1,
+  },
+  appName: {
+    fontSize: 24,
+    fontWeight: '900',
+    color: '#fff',
+    letterSpacing: 1,
+  },
+  appTagline: {
+    fontSize: 11,
+    color: 'rgba(255, 255, 255, 0.85)',
+    marginTop: 0,
+    fontWeight: '500',
+  },
+  cartButton: {
+    marginLeft: 12,
+  },
+  cartIconWrapper: {
+    position: 'relative',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cartBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    backgroundColor: '#FF3B30',
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 6,
+    borderWidth: 2,
+    borderColor: '#fff',
+  },
+  cartBadgeText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '800',
+  },
+  searchSection: {
+    paddingHorizontal: 16,
     paddingTop: 10,
     paddingBottom: 15,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-  },
-  welcomeContainer: {
-    paddingHorizontal: 16,
-    marginBottom: 10,
-  },
-  welcomeText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#2d3748',
-    marginBottom: 2,
-  },
-  subtitleText: {
-    fontSize: 14,
-    color: '#718096',
-  },
-  searchContainer: {
-    paddingHorizontal: 16,
-    marginBottom: 15,
   },
   searchBar: {
-    borderRadius: 12,
-    elevation: 0,
-    backgroundColor: '#f7fafc',
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    height: 48,
+    backgroundColor: '#fff',
+    borderRadius: 24,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    height: 45,
   },
-  bannerContainer: {
+  searchInput: {
+    fontSize: 14,
+    color: '#333',
+    minHeight: 45,
+    alignSelf: 'center',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  bannerSection: {
     marginHorizontal: 16,
-    marginBottom: 20,
+    marginTop: 10,
     borderRadius: 16,
     overflow: 'hidden',
-    elevation: 3,
-    backgroundColor: '#fff',
+    height: 180,
+    position: 'relative',
+    elevation: 5,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    backgroundColor: '#fff',
   },
   bannerImage: {
     width: '100%',
-    height: 180,
-    borderRadius: 16,
+    height: '100%',
   },
-  indicators: {
+  bannerIndicators: {
     position: 'absolute',
-    bottom: 12,
+    bottom: 16,
     left: 0,
     right: 0,
     flexDirection: 'row',
     justifyContent: 'center',
+    gap: 8,
   },
   indicator: {
     width: 6,
     height: 6,
     borderRadius: 3,
     backgroundColor: 'rgba(255, 255, 255, 0.6)',
-    marginHorizontal: 3,
   },
   activeIndicator: {
-    width: 18,
+    width: 20,
     backgroundColor: '#fff',
   },
-  sectionContainer: {
-    marginBottom: 20,
+  quickActionsSection: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    gap: 16,
+    marginTop: 24,
+    marginBottom: 8,
+  },
+  quickActionCard: {
+    flex: 1,
+    borderRadius: 16,
+    overflow: 'hidden',
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+  },
+  quickActionGradient: {
+    padding: 12,
+    alignItems: 'center',
+  },
+  quickActionIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+  },
+  quickActionText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#333',
+    textAlign: 'center',
+    letterSpacing: 0.3,
+  },
+  section: {
+    marginTop: 28,
   },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#fff',
+    paddingHorizontal: 20,
+    marginBottom: 16,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#2d3748',
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#1A1A1A',
+    letterSpacing: 0.3,
   },
   viewAllText: {
-    fontSize: 14,
-    color: '#4a90e2',
-    fontWeight: '500',
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#8D6E63',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
-  featuredProductsContainer: {
-    paddingLeft: 16,
+  categoriesScroll: {
+    paddingHorizontal: 20,
+    gap: 16,
   },
-  featuredProductCard: {
-    width: 160,
-    marginRight: 12,
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 3,
-    overflow: 'hidden',
-    position: 'relative',
-    marginTop: 20,
+  categoryCard: {
+    alignItems: 'center',
+    width: 80,
   },
-  featuredProductTouchable: {
-    flex: 1,
-  },
-  featuredProductImageContainer: {
-    width: '100%',
-    height: 110,
-    backgroundColor: '#f8f9fa',
+  categoryImageContainer: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
     justifyContent: 'center',
     alignItems: 'center',
-    position: 'relative',
+    marginBottom: 8,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 6,
+    borderWidth: 2,
+    borderColor: '#fff',
   },
-  featuredProductImage: {
+  categoryImage: {
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+  },
+  categoryPlaceholder: {
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    backgroundColor: '#F5F5F5',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  categoryPlaceholderText: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#8D6E63',
+  },
+  categoryName: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#444',
+    textAlign: 'center',
+    lineHeight: 16,
+    marginTop: 4,
+  },
+  productsScroll: {
+    paddingHorizontal: 20,
+    gap: 16,
+    paddingBottom: 24, // Space for shadow
+  },
+  productCard: {
+    width: 170,
+    borderRadius: 20,
+    overflow: 'visible', // Allow shadow to show
+    elevation: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#f0f0f0',
+  },
+  productImageContainer: {
+    width: '100%',
+    height: 150,
+    backgroundColor: '#fff', // White background
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 16,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f8f8f8',
+  },
+  productImage: {
     width: '100%',
     height: '100%',
+  },
+  discountBadge: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    backgroundColor: '#FF3B30',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 2,
+  },
+  discountText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '900',
+  },
+  discountOff: {
+    color: '#fff',
+    fontSize: 9,
+    fontWeight: '700',
   },
   outOfStockOverlay: {
     position: 'absolute',
@@ -806,217 +1184,237 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   outOfStockText: {
     color: '#fff',
     fontSize: 12,
-    fontWeight: '600',
-    backgroundColor: '#e53e3e',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
+    fontWeight: '700',
+    backgroundColor: '#d32f2f',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
   },
-  featuredProductDetails: {
-    padding: 10,
+  productDetails: {
+    padding: 12,
   },
-  featuredProductName: {
+  productName: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#1A1A1A',
+    marginBottom: 8,
+    lineHeight: 18,
+  },
+  priceRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 6,
+    marginBottom: 8,
+  },
+  currentPrice: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: '#1A1A1A',
+  },
+  originalPrice: {
     fontSize: 13,
-    fontWeight: '600',
-    color: '#2d3748',
-    marginBottom: 6,
-    lineHeight: 16,
+    fontWeight: '500',
+    color: '#999',
+    textDecorationLine: 'line-through',
   },
-  variantSelector: {
+  sizeSelector: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#f7fafc',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    marginBottom: 6,
-  },
-  variantText: {
-    fontSize: 11,
-    color: '#4a5568',
-    fontWeight: '500',
-  },
-  featuredPriceContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  featuredPrice: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#38a169',
-  },
-  featuredOldPrice: {
-    fontSize: 12,
-    color: '#a0aec0',
-    textDecorationLine: 'line-through',
-    marginLeft: 6,
-  },
-  addToCartButton: {
-    position: 'absolute',
-    bottom: height*0.18,
-    right: 8,
-    backgroundColor: '#4a90e2',
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
+    backgroundColor: '#F5F5F5',
+    paddingHorizontal: 10,
     paddingVertical: 6,
+    borderRadius: 8,
+  },
+  sizeText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#666',
+  },
+  addButton: {
+    position: 'absolute',
+    bottom: 8,
+    right: 8,
     borderRadius: 20,
+    overflow: 'hidden',
+    elevation: 4,
+    shadowColor: '#8D6E63',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+  },
+  addButtonGradient: {
+    width: 36,
+    height: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  featuredActionContainer: {
+    position: 'absolute',
+    bottom: 8,
+    right: 8,
+    left: 8,
+    alignItems: 'flex-end',
+  },
+  homeQuantityControl: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    overflow: 'hidden',
+    height: 32,
     elevation: 3,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.1,
     shadowRadius: 2,
   },
-  addToCartText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '600',
-    marginLeft: 4,
-  },
-  categoriesContainer: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#fff',
-  },
-  categoriesGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-  },
-  categoryCard: {
-    width: (width - 48) / 3,
-    marginBottom: 16,
-    alignItems: 'center',
-    borderRadius: 22,
-  },
-  categoryImageContainer: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    backgroundColor: '#f0f9ff',
+  homeQuantityBtn: {
+    width: 30,
+    height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 8,
-    elevation: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 1,
+    backgroundColor: '#F5F5F5',
   },
-  categoryImage: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+  homeQuantityBtnPlus: {
+    backgroundColor: '#8D6E63',
   },
-  categoryName: {
-    fontSize: 12,
-    fontWeight: '500',
+  homeQuantityInput: {
+    paddingHorizontal: 5,
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#333',
+    minWidth: 40,
     textAlign: 'center',
-    color: '#4a5568',
-    lineHeight: 16,
+    paddingVertical: 0,
+    height: '100%',
   },
-  quickActionsContainer: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#fff',
-  },
-  quickActionsGrid: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  quickActionCard: {
-    flex: 1,
-    marginHorizontal: 4,
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    elevation: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-  },
-  quickActionTouchable: {
-    padding: 16,
-    alignItems: 'center',
-  },
-  quickActionIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#e6fffa',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  quickActionTitle: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#2d3748',
-    textAlign: 'center',
-  },
-  quickActionSubtitle: {
-    fontSize: 10,
-    color: '#718096',
-    textAlign: 'center',
-    marginTop: 2,
+  bottomSpace: {
+    height: 20,
   },
   bottomNav: {
     flexDirection: 'row',
     backgroundColor: '#fff',
     borderTopWidth: 1,
-    borderTopColor: '#e2e8f0',
-    paddingBottom: 8,
-    height: 64,
-    elevation: 8,
+    borderTopColor: '#E0E0E0',
+    paddingVertical: 8,
+    paddingBottom: 12,
+    elevation: 10,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
+    shadowOffset: { width: 0, height: -3 },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowRadius: 8,
   },
   navItem: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 4,
   },
-  cartButton: {
+  navIconWrapper: {
     position: 'relative',
-    marginRight: 8,
   },
-  badge: {
+  navBadge: {
     position: 'absolute',
-    top: 4,
-    right: 4,
-    backgroundColor: '#e53e3e',
-    fontSize: 10,
-    height: 18,
+    top: -6,
+    right: -8,
+    backgroundColor: '#FF3B30',
     minWidth: 18,
+    height: 18,
     borderRadius: 9,
-  },
-  emptyProductsContainer: {
-    padding: 40,
-    alignItems: 'center',
     justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
   },
-  emptyProductsText: {
+  navBadgeText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '800',
+  },
+  navText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#666',
+  },
+  searchResultsOverlay: {
+    position: 'absolute',
+    top: 180, // High enough to cover main content but below search bar
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 1000,
+  },
+  overlayBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+  },
+  resultsContainer: {
+    backgroundColor: '#fff',
+    marginHorizontal: 16,
+    borderRadius: 12,
+    elevation: 5,
+    maxHeight: '80%',
+    overflow: 'hidden',
+  },
+  resultsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  resultsTitle: {
     fontSize: 14,
-    color: '#a0aec0',
-    marginTop: 12,
-    textAlign: 'center',
+    fontWeight: '700',
+    color: '#666',
   },
-  loadingShimmer: {
-    backgroundColor: '#f7fafc',
-    borderRadius: 8,
+  closeBtn: {
+    color: '#8D6E63',
+    fontWeight: '700',
   },
-  gradient: {
+  searchResultItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f5f5f5',
+  },
+  resultImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 4,
+    backgroundColor: '#f9f9f9',
+  },
+  resultDetails: {
     flex: 1,
+    marginLeft: 12,
+  },
+  resultName: {
+    fontSize: 14,
+    color: '#333',
+    fontWeight: '600',
+  },
+  resultPrice: {
+    fontSize: 12,
+    color: '#4CAF50',
+    fontWeight: '700',
+  },
+  emptyResults: {
+    padding: 30,
+    alignItems: 'center',
+  },
+  emptyResultsText: {
+    color: '#999',
   },
 });
 

@@ -108,7 +108,7 @@ class CameraService {
 
     // You'll need to implement this endpoint in your API
     const response = await fetch(
-      'http://routegadi.com/admin/api/v1/UploadGroceryList',
+      'http://smdtpt.in/admin/api/v1/UploadGroceryList',
       {
         method: 'POST',
         body: formData,

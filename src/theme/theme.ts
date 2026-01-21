@@ -4,19 +4,19 @@ export const theme = {
   ...DefaultTheme,
   colors: {
     ...DefaultTheme.colors,
-    primary: '#2E7D32', // Dark green for grocery theme
-    primaryContainer: '#A5D6A7', // Light green
-    secondary: '#FF9800', // Orange accent
-    secondaryContainer: '#FFE0B2', // Light orange
-    background: '#F1F8E9', // Light green background
-    surface: '#FFFFFF', // White surface
-    error: '#D32F2F', // Red for errors
-    onPrimary: '#FFFFFF', // White text on primary
-    onSecondary: '#000000', // Black text on secondary
-    onBackground: '#1B1B1B', // Dark text on background
-    onSurface: '#1B1B1B', // Dark text on surface
-    onSurfaceVariant: '#666666', // Gray text for secondary content
-    outline: '#4CAF50', // Green outline
+    primary: '#8D6E63', // Warm Natural Brown
+    primaryContainer: '#D7CCC8', // Light Tan/Beige
+    secondary: '#B8860B', // Golden accent
+    secondaryContainer: '#F5DEB3', // Wheat
+    background: '#FAF9F6', // Off-white/Creamy background
+    surface: '#FFFFFF',
+    error: '#D32F2F',
+    onPrimary: '#FFFFFF',
+    onSecondary: '#FFFFFF',
+    onBackground: '#3E2723', // Deep coffee brown for text
+    onSurface: '#3E2723',
+    onSurfaceVariant: '#795548',
+    outline: '#A1887F',
   },
 };
 

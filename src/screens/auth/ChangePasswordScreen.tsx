@@ -113,7 +113,7 @@ const ChangePasswordScreen: React.FC<Props> = ({ navigation }) => {
             <View
               style={[styles.logo, { backgroundColor: theme.colors.primary }]}
             >
-              <Text style={[styles.logoText, { color: theme.colors.onPrimary }]}>ROUTEGADI</Text>
+              <Text style={[styles.logoText, { color: theme.colors.onPrimary }]}>SMD</Text>
             </View>
             <Text style={[styles.subtitle, { color: theme.colors.onSurface }]}>
               Need to change password, Here you go...

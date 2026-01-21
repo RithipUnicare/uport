@@ -123,6 +123,7 @@ export interface ProductResponse {
   status: number;
   products: Product[];
   image_url: string;
+  subcategoryId?: number;
 }
 
 // Order-related request/response types

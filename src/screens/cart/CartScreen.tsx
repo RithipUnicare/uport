@@ -23,9 +23,10 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/AppNavigator';
 import CartService from '../../services/cart.service';
 import OrderService from '../../services/order.service';
-import { StorageService } from '../../utils/storage';
+import { StorageService, STORAGE_KEYS } from '../../utils/storage';
 import Toast from 'react-native-toast-message';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import GradientHeader from '../../components/GradientHeader';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Cart'>;
 
@@ -48,6 +49,8 @@ const CartScreen: React.FC<Props> = ({ navigation }) => {
   const [deliveryCharge, setDeliveryCharge] = useState(0);
   const [minimumOrder, setMinimumOrder] = useState(0);
   const [userId, setUserId] = useState<number | null>(null);
+  const [localQtys, setLocalQtys] = useState<{ [key: number]: string }>({});
+  const [isInputFocused, setIsInputFocused] = useState<{ [key: number]: boolean }>({});
 
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -96,6 +99,12 @@ const CartScreen: React.FC<Props> = ({ navigation }) => {
 
       if (cartRes.status === 1 && cartRes.result) {
         setCartItems(cartRes.result);
+        // Sync local quantities
+        const qtyMap: { [key: number]: string } = {};
+        cartRes.result.forEach((item: CartItem) => {
+          qtyMap[item.product_id] = item.quantity.toString();
+        });
+        setLocalQtys(prev => ({ ...prev, ...qtyMap }));
       }
 
       if (deliveryRes.status === 1 && deliveryRes.result?.area) {
@@ -110,14 +119,17 @@ const CartScreen: React.FC<Props> = ({ navigation }) => {
     }
   };
 
-  const updateQuantity = async (productId: number, increment: number) => {
+  const updateQuantity = async (productId: number, absoluteQty: number) => {
     if (!userId) return;
+
+    // Prevent quantity from going below 1 via this method
+    if (absoluteQty < 1) return;
 
     try {
       await CartService.addToCart({
         user_id: userId,
         product_id: productId,
-        quantity: increment, // +1 to add, -1 to subtract
+        quantity: absoluteQty,
       });
       await loadCart();
     } catch (error) {
@@ -127,6 +139,24 @@ const CartScreen: React.FC<Props> = ({ navigation }) => {
         text2: 'Failed to update quantity',
       });
     }
+  };
+
+  const handleManualQuantity = async (productId: number, currentQty: number, newQtyString: string) => {
+    const newQty = parseInt(newQtyString);
+    if (!isNaN(newQty) && newQty > 0) {
+      if (newQty !== currentQty) {
+        await updateQuantity(productId, newQty);
+      } else {
+        setLocalQtys(prev => ({ ...prev, [productId]: currentQty.toString() }));
+      }
+    } else {
+      loadCart(); // Reset to valid state
+    }
+  };
+
+  const handleQtyInputChange = (productId: number, text: string) => {
+    const cleanText = text.replace(/[^0-9]/g, '');
+    setLocalQtys(prev => ({ ...prev, [productId]: cleanText }));
   };
 
   const removeItem = async (productId: number, currentQuantity: number) => {
@@ -196,7 +226,9 @@ const CartScreen: React.FC<Props> = ({ navigation }) => {
           text1: 'Success',
           text2: 'Order placed successfully',
         });
-        navigation.navigate('MyOrders');
+        // Clear cart count in storage
+        await StorageService.setItem(STORAGE_KEYS.CART_VAL, '0');
+        navigation.replace('Home');
       } else {
         Toast.show({
           type: 'error',
@@ -216,20 +248,18 @@ const CartScreen: React.FC<Props> = ({ navigation }) => {
     }
   };
 
-  const subtotal = cartItems.reduce(
+  const subtotal = Math.max(0, cartItems.reduce(
     (sum, item) => sum + item.sales_price * item.quantity,
     0,
-  );
+  ));
 
   return (
-    <SafeAreaView
-      style={[styles.container, { backgroundColor: theme.colors.background }]}
-      edges={['top', 'left', 'right', 'bottom']}
-    >
-      <Appbar.Header style={{ backgroundColor: theme.colors.primary, elevation: 0 }}>
-        <Appbar.BackAction onPress={() => navigation.goBack()} color={theme.colors.onSurface} iconColor='#fff'/>
-        <Appbar.Content title="My Cart" titleStyle={{ color: '#ffff', fontWeight: '700' }}  color='#fff'/>
-      </Appbar.Header>
+    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <GradientHeader
+        title="My Cart"
+        showBack={true}
+        onBackPress={() => navigation.goBack()}
+      />
 
       {cartItems.length === 0 ? (
         <Animated.View style={[styles.emptyContainer, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
@@ -288,30 +318,28 @@ const CartScreen: React.FC<Props> = ({ navigation }) => {
 
                       <View style={styles.quantityContainer}>
                         <TouchableOpacity
-                          style={styles.quantityButton}
-                          onPress={() => updateQuantity(item.product_id, Number(item.quantity) - 1)}
+                          style={[styles.quantityButton, isInputFocused[item.product_id] && { opacity: 0.5 }]}
+                          onPress={() => updateQuantity(item.product_id, Math.max(1, item.quantity - 1))}
+                          disabled={isInputFocused[item.product_id]}
                         >
-                          <Text style={styles.quantityButtonText}>−</Text>
+                          <Text style={[styles.quantityButtonText, { color: theme.colors.primary }]}>−</Text>
                         </TouchableOpacity>
                         <TextInput
-                          style={styles.quantityInput}
-                          value={item.quantity.toString()}
+                          style={[styles.quantityInput, { color: theme.colors.primary }]}
+                          value={localQtys[item.product_id] || Math.max(1, item.quantity).toString()}
                           keyboardType="numeric"
-                          onChangeText={text => {
-                            const qty = parseInt(text) || 1;
-                            if (qty > 0) {
-                              const diff = qty - item.quantity;
-                              if (diff !== 0) {
-                                updateQuantity(item.product_id, diff);
-                              }
-                            }
-                          }}
+                          selectTextOnFocus={true}
+                          onFocus={() => setIsInputFocused(prev => ({ ...prev, [item.product_id]: true }))}
+                          onBlur={() => setIsInputFocused(prev => ({ ...prev, [item.product_id]: false }))}
+                          onChangeText={(text) => handleQtyInputChange(item.product_id, text)}
+                          onEndEditing={(e) => handleManualQuantity(item.product_id, item.quantity, e.nativeEvent.text)}
                         />
                         <TouchableOpacity
-                          style={styles.quantityButton}
-                          onPress={() => {updateQuantity(item.product_id, Number(item.quantity) + 1);}}
+                          style={[styles.quantityButton, isInputFocused[item.product_id] && { opacity: 0.5 }]}
+                          onPress={() => { updateQuantity(item.product_id, parseInt(item.quantity.toString()) + 1); }}
+                          disabled={isInputFocused[item.product_id]}
                         >
-                          <Text style={styles.quantityButtonText}>+</Text>
+                          <Text style={[styles.quantityButtonText, { color: theme.colors.primary }]}>+</Text>
                         </TouchableOpacity>
                       </View>
                     </View>
@@ -382,7 +410,7 @@ const CartScreen: React.FC<Props> = ({ navigation }) => {
           </View>
         </>
       )}
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -478,11 +506,11 @@ const styles = StyleSheet.create({
   },
   quantityInput: {
     fontSize: 16,
-    color: '#b90617',
-    fontWeight: '700',
+    fontWeight: '800',
     minWidth: 40,
     textAlign: 'center',
     padding: 0,
+    height: '100%',
   },
   priceCard: {
     marginTop: 8,
@@ -527,7 +555,6 @@ const styles = StyleSheet.create({
   totalValue: {
     fontSize: 18,
     fontWeight: '800',
-    color: '#b90617',
   },
   footer: {
     backgroundColor: '#fff',
@@ -550,7 +577,6 @@ const styles = StyleSheet.create({
   },
   footerTotalAmount: {
     fontWeight: '800',
-    color: '#b90617',
     fontSize: 24,
   },
   checkoutButton: {

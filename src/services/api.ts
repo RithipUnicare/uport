@@ -1,7 +1,8 @@
 import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
 import { StorageService, STORAGE_KEYS } from '../utils/storage';
+import Toast from 'react-native-toast-message';
 
-export const BASE_URL = 'http://routegadi.com/admin/';
+export const BASE_URL = 'https://routegadi.com/admin/';
 
 class ApiService {
   private api: AxiosInstance;
@@ -17,6 +18,11 @@ class ApiService {
     // Request interceptor to add token
     this.api.interceptors.request.use(
       async config => {
+        // Essential: Prevent leading slash from stripping baseURL path (/admin/)
+        if (config.url?.startsWith('/')) {
+          config.url = config.url.substring(1);
+        }
+
         const token = await StorageService.getItem(STORAGE_KEYS.TOKEN);
         if (token) {
           config.headers.Authorization = token;
@@ -32,7 +38,17 @@ class ApiService {
     this.api.interceptors.response.use(
       response => response,
       error => {
-        console.error('API Error:', error);
+        const fullUrl = error.config ? `${error.config.baseURL || ''}${error.config.url || ''}` : 'Unknown URL';
+        console.error(`API Error [${error.response?.status}] at ${fullUrl}:`, error);
+
+        // Show actual failing URL in Toast for debugging - making it clearer
+        Toast.show({
+          type: 'error',
+          text1: `Error ${error.response?.status || 'Failed'}`,
+          text2: `Path: ${error.config?.url || 'unknown'}`,
+          visibilityTime: 6000,
+        });
+
         return Promise.reject(error);
       },
     );
@@ -80,7 +96,7 @@ class ApiService {
     if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
       return imagePath;
     }
-    return `${BASE_URL}${baseImageUrl}${imagePath}`;
+    return `${BASE_URL.endsWith('/') ? BASE_URL : BASE_URL + '/'}${baseImageUrl.startsWith('/') ? baseImageUrl.substring(1) : baseImageUrl}${imagePath}`;
   }
 
   // Get the base URL

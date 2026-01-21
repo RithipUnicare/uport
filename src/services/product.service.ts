@@ -49,30 +49,43 @@ class ProductService {
   }
 
   // Search products
-  async searchProducts(query: string): Promise<ProductResponse> {
-    return await ApiService.post<ProductResponse>('/api/v1/SearchProducts', {
+  async searchProducts(query: string, userId?: number): Promise<ProductResponse> {
+    return await ApiService.post<ProductResponse>('/api/v1/SearchProductBB', {
       query,
+      user_id: userId || 1,
     });
   }
 
   // Get featured products (products from first subcategory of first category)
   async getFeaturedProducts(userId?: number): Promise<ProductResponse> {
     try {
+      console.log('Fetching featured products sequence...');
       // First get categories
       const categoriesRes = await this.getCategories();
+      console.log('Categories status:', categoriesRes.status, 'Count:', categoriesRes.categories?.length);
+
       if (categoriesRes.categories && categoriesRes.categories.length > 0) {
         // Get subcategories of first category
-        const subcategoriesRes = await this.getSubCategories(categoriesRes.categories[0].id);
+        const firstCatId = categoriesRes.categories[0].id;
+        console.log('Fetching subcategories for Cat ID:', firstCatId);
+        const subcategoriesRes = await this.getSubCategories(firstCatId);
+        console.log('Subcategories status:', subcategoriesRes.status, 'Count:', subcategoriesRes.subcategories?.length);
+
         if (subcategoriesRes.subcategories && subcategoriesRes.subcategories.length > 0) {
           // Get products from first subcategory
-          const productsRes = await this.getProducts(subcategoriesRes.subcategories[0].id, userId);
-          return productsRes;
+          const firstSubCatId = subcategoriesRes.subcategories[0].id;
+          console.log('Fetching products for SubCat ID:', firstSubCatId);
+          const productsRes = await this.getProducts(firstSubCatId, userId);
+          console.log('Products status:', productsRes.status, 'Count:', productsRes.products?.length);
+          return { ...productsRes, subcategoryId: firstSubCatId };
         }
       }
+
+      console.log('Sequence incomplete, falling back to search "rice"');
       // Fallback: try to search for common products
       return await this.searchProducts('rice');
-    } catch (error) {
-      console.error('Error getting featured products:', error);
+    } catch (error: any) {
+      console.error('Error getting featured products:', error?.message);
       // Return empty response instead of throwing
       return { status: 0, products: [], image_url: '' };
     }

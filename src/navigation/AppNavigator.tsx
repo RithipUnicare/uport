@@ -4,6 +4,9 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { ActivityIndicator, View } from 'react-native';
 import { StorageService, STORAGE_KEYS } from '../utils/storage';
 
+// Splash screen
+import SplashScreen from '../screens/SplashScreen';
+
 // Auth screens
 import LoginScreen from '../screens/auth/LoginScreen';
 import RegisterScreen from '../screens/auth/RegisterScreen';
@@ -15,6 +18,7 @@ import ChangePasswordScreen from '../screens/auth/ChangePasswordScreen';
 import HomeScreen from '../screens/home/HomeScreen';
 import SubCategoryScreen from '../screens/home/SubCategoryScreen';
 import ProductScreen from '../screens/home/ProductScreen';
+import CategoriesScreen from '../screens/home/CategoriesScreen';
 
 // Cart screens
 import CartScreen from '../screens/cart/CartScreen';
@@ -32,6 +36,7 @@ import PrivacyPolicyScreen from '../screens/info/PrivacyPolicyScreen';
 
 // Define navigation types
 export type RootStackParamList = {
+  Splash: undefined;
   Login: undefined;
   Register: undefined;
   VerifyOtp: {
@@ -45,8 +50,14 @@ export type RootStackParamList = {
     };
   };
   Home: undefined;
+  Categories: undefined;
   SubCategory: { categoryId: number; categoryName: string };
-  Product: { subcategoryId: number; subcategoryName: string };
+  Product: {
+    subcategoryId?: number;
+    subcategoryName?: string;
+    searchQuery?: string;
+    product?: any;
+  };
   Cart: undefined;
   MyOrders: undefined;
   ChangePassword: undefined;
@@ -61,129 +72,114 @@ export type RootStackParamList = {
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 const AppNavigator: React.FC = () => {
-  const [isLoading, setIsLoading] = useState(true);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-
-  useEffect(() => {
-    checkAuthStatus();
-  }, []);
-
-  const checkAuthStatus = async () => {
-    try {
-      const token = await StorageService.getItem(STORAGE_KEYS.TOKEN);
-      setIsAuthenticated(!!token);
-    } catch (error) {
-      console.error('Error checking auth status:', error);
-      setIsAuthenticated(false);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   return (
     <NavigationContainer>
-      {isLoading ? (
-        <View
-          style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}
-        >
-          <ActivityIndicator size="large" color="#b90617" />
-        </View>
-      ) : (
-        <Stack.Navigator
-          initialRouteName={isAuthenticated ? 'Home' : 'Login'}
-          screenOptions={{
-            headerStyle: {
-              backgroundColor: '#b90617',
-            },
-            headerTintColor: '#fff',
-            headerTitleStyle: {
-              fontWeight: 'bold',
-            },
-          }}
-        >
-          {/* Auth Screens */}
-          <Stack.Screen
-            name="Login"
-            component={LoginScreen}
-            options={{ headerShown: false }}
-          />
-          <Stack.Screen
-            name="Register"
-            component={RegisterScreen}
-            options={{ headerShown: false }}
-          />
-          <Stack.Screen
-            name="VerifyOtp"
-            component={VerifyOtpScreen}
-            options={{ headerShown: false }}
-          />
-          <Stack.Screen
-            name="Profile"
-            component={ProfileScreen}
-            options={{ headerShown: false }}
-          />
-          <Stack.Screen
-            name="ChangePassword"
-            component={ChangePasswordScreen}
-            options={{ headerShown: false }}
-          />
+      <Stack.Navigator
+        initialRouteName="Splash"
+        screenOptions={{
+          headerStyle: {
+            backgroundColor: '#b90617',
+          },
+          headerTintColor: '#fff',
+          headerTitleStyle: {
+            fontWeight: 'bold',
+          },
+        }}
+      >
+        {/* Splash Screen */}
+        <Stack.Screen
+          name="Splash"
+          component={SplashScreen}
+          options={{ headerShown: false }}
+        />
 
-          {/* Home Screens */}
-          <Stack.Screen
-            name="Home"
-            component={HomeScreen}
-            options={{ headerShown: false }}
-          />
-          <Stack.Screen
-            name="SubCategory"
-            component={SubCategoryScreen}
-            options={{ headerShown: false }}
-          />
-          <Stack.Screen
-            name="Product"
-            component={ProductScreen}
-            options={{ headerShown: false }}
-          />
+        {/* Auth Screens */}
+        <Stack.Screen
+          name="Login"
+          component={LoginScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="Register"
+          component={RegisterScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="VerifyOtp"
+          component={VerifyOtpScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="Profile"
+          component={ProfileScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="ChangePassword"
+          component={ChangePasswordScreen}
+          options={{ headerShown: false }}
+        />
 
-          {/* Cart */}
-          <Stack.Screen
-            name="Cart"
-            component={CartScreen}
-            options={{ headerShown: false }}
-          />
+        {/* Home Screens */}
+        <Stack.Screen
+          name="Home"
+          component={HomeScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="Categories"
+          component={CategoriesScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="SubCategory"
+          component={SubCategoryScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="Product"
+          component={ProductScreen}
+          options={{ headerShown: false }}
+        />
 
-          {/* Orders */}
-          <Stack.Screen
-            name="MyOrders"
-            component={MyOrdersScreen}
-            options={{ headerShown: false }}
-          />
+        {/* Cart */}
+        <Stack.Screen
+          name="Cart"
+          component={CartScreen}
+          options={{ headerShown: false }}
+        />
 
-          {/* Settings */}
-          <Stack.Screen
-            name="Settings"
-            component={SettingsScreen}
-            options={{ headerShown: false }}
-          />
+        {/* Orders */}
+        <Stack.Screen
+          name="MyOrders"
+          component={MyOrdersScreen}
+          options={{ headerShown: false }}
+        />
 
-          {/* Info Screens */}
-          <Stack.Screen
-            name="ContactUs"
-            component={ContactUsScreen}
-            options={{ headerShown: false }}
-          />
-          <Stack.Screen
-            name="TermsAndConditions"
-            component={TermsAndConditionsScreen}
-            options={{ headerShown: false }}
-          />
-          <Stack.Screen
-            name="PrivacyPolicy"
-            component={PrivacyPolicyScreen}
-            options={{ headerShown: false }}
-          />
-        </Stack.Navigator>
-      )}
+        {/* Settings */}
+        <Stack.Screen
+          name="Settings"
+          component={SettingsScreen}
+          options={{ headerShown: false }}
+        />
+
+        {/* Info Screens */}
+        <Stack.Screen
+          name="ContactUs"
+          component={ContactUsScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="TermsAndConditions"
+          component={TermsAndConditionsScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="PrivacyPolicy"
+          component={PrivacyPolicyScreen}
+          options={{ headerShown: false }}
+        />
+      </Stack.Navigator>
     </NavigationContainer>
   );
 };

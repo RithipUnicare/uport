@@ -58,6 +58,15 @@ class OrderService {
       requestData,
     );
   }
+  // Cancel order
+  async cancelOrder(orderId: number, userId: number): Promise<APIResponse> {
+    return await ApiService.post<APIResponse>('/api/v1/CancelOrder', {
+      order: {
+        order_id: orderId,
+        user_id: userId,
+      },
+    });
+  }
 }
 
 export default new OrderService();

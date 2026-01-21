@@ -80,6 +80,16 @@ const SubCategoryScreen: React.FC<Props> = ({ navigation, route }) => {
           placeholder="Search For Products, Brands And More..."
           onChangeText={setSearchQuery}
           value={searchQuery}
+          onSubmitEditing={() => {
+            if (searchQuery.trim()) {
+              navigation.navigate('Product', { searchQuery: searchQuery.trim() });
+            }
+          }}
+          onIconPress={() => {
+            if (searchQuery.trim()) {
+              navigation.navigate('Product', { searchQuery: searchQuery.trim() });
+            }
+          }}
           style={styles.searchBar}
         />
       </View>

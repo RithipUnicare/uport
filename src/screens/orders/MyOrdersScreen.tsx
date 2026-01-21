@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, StyleSheet, ScrollView, RefreshControl, Animated, Easing, FlatList } from 'react-native';
+import { View, StyleSheet, ScrollView, RefreshControl, Animated, Easing, FlatList, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   Appbar,
@@ -13,11 +13,13 @@ import {
   Button,
   Divider,
 } from 'react-native-paper';
+import Toast from 'react-native-toast-message';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/AppNavigator';
 import OrderService from '../../services/order.service';
 import { StorageService } from '../../utils/storage';
 import { Order } from '../../types';
+import GradientHeader from '../../components/GradientHeader';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'MyOrders'>;
 
@@ -28,6 +30,7 @@ const MyOrdersScreen: React.FC<Props> = ({ navigation }) => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [dialogVisible, setDialogVisible] = useState(false);
+  const [activeTab, setActiveTab] = useState<'active' | 'cancelled'>('active');
 
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -75,6 +78,47 @@ const MyOrdersScreen: React.FC<Props> = ({ navigation }) => {
     setRefreshing(false);
   };
 
+  const handleCancelOrder = async (orderId: number) => {
+    try {
+      const userId = await StorageService.getItem('user_id');
+      if (!userId) {
+        Toast.show({
+          type: 'error',
+          text1: 'Error',
+          text2: 'User not logged in',
+        });
+        return;
+      }
+
+      setLoading(true);
+      const response = await OrderService.cancelOrder(orderId, parseInt(userId));
+      if (response.status === 1) {
+        Toast.show({
+          type: 'success',
+          text1: 'Order Cancelled',
+          text2: 'Your order has been cancelled successfully.',
+        });
+        setDialogVisible(false);
+        await loadOrders();
+      } else {
+        Toast.show({
+          type: 'error',
+          text1: 'Error',
+          text2: response.message || 'Failed to cancel order',
+        });
+      }
+    } catch (error) {
+      console.error(error);
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Something went wrong',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const getStatusLabel = (statusCode: string) => {
     switch (statusCode) {
       case '1':
@@ -107,44 +151,73 @@ const MyOrdersScreen: React.FC<Props> = ({ navigation }) => {
 
   if (loading) {
     return (
-      <SafeAreaView
-        style={styles.container}
-        edges={['top', 'left', 'right', 'bottom']}
-      >
-        <Appbar.Header style={{ backgroundColor: theme.colors.primary }}>
-          <Appbar.BackAction onPress={() => navigation.goBack()} />
-          <Appbar.Content title="My Orders" />
-        </Appbar.Header>
+      <View style={styles.container}>
+        <GradientHeader
+          title="My Orders"
+          showBack={true}
+          onBackPress={() => navigation.goBack()}
+        />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={theme.colors.primary} />
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView
-      style={[styles.container, { backgroundColor: theme.colors.background }]}
-      edges={['top', 'left', 'right', 'bottom']}
-    >
-      <Appbar.Header style={{ backgroundColor: theme.colors.primary, elevation: 0 }}>
-        <Appbar.BackAction onPress={() => navigation.goBack()} iconColor='#fff' />
-        <Appbar.Content title="My Orders" titleStyle={{ color: '#fff', fontWeight: '700' }} color='#fff' />
-      </Appbar.Header>
+    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <GradientHeader
+        title="My Orders"
+        showBack={true}
+        onBackPress={() => navigation.goBack()}
+      />
 
-      {orders.length === 0 ? (
+      <View style={styles.tabContainer}>
+        <View style={styles.tabWrapper}>
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'active' && styles.activeTab]}
+            onPress={() => setActiveTab('active')}
+          >
+            <Text
+              style={[
+                styles.tabText,
+                activeTab === 'active' && styles.activeTabText,
+                { color: activeTab === 'active' ? '#fff' : theme.colors.onSurfaceVariant }
+              ]}
+            >
+              Active Orders
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'cancelled' && styles.activeTab]}
+            onPress={() => setActiveTab('cancelled')}
+          >
+            <Text
+              style={[
+                styles.tabText,
+                activeTab === 'cancelled' && styles.activeTabText,
+                { color: activeTab === 'cancelled' ? '#fff' : theme.colors.onSurfaceVariant }
+              ]}
+            >
+              Cancelled
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {orders.filter(order => activeTab === 'cancelled' ? order.order_status === '4' : order.order_status !== '4').length === 0 ? (
         <Animated.View style={[styles.emptyContainer, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
           <Text variant="titleMedium" style={[styles.emptyText, { color: theme.colors.onSurface }]}>
-            No orders yet
+            No {activeTab} orders yet
           </Text>
           <Text variant="bodyMedium" style={[styles.subtitle, { color: theme.colors.onSurfaceVariant }]}>
-            Start shopping to see your orders here
+            {activeTab === 'active' ? 'Start shopping to see your orders here' : 'No cancelled orders found'}
           </Text>
         </Animated.View>
       ) : (
         <Animated.FlatList
           style={[styles.content, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}
-          data={orders}
+          data={orders.filter(order => activeTab === 'cancelled' ? order.order_status === '4' : order.order_status !== '4')}
           renderItem={({ item: order }) => (
             <Card
               style={styles.orderCard}
@@ -308,11 +381,19 @@ const MyOrdersScreen: React.FC<Props> = ({ navigation }) => {
             </ScrollView>
           </Dialog.ScrollArea>
           <Dialog.Actions>
+            {selectedOrder?.order_status === '1' && (
+              <Button
+                disabled={true}
+                textColor={theme.colors.error}
+              >
+                Cancel Order
+              </Button>
+            )}
             <Button onPress={() => setDialogVisible(false)}>Close</Button>
           </Dialog.Actions>
         </Dialog>
       </Portal>
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -487,6 +568,38 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingVertical: 4,
+  },
+  tabContainer: {
+    backgroundColor: '#fff',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+  },
+  tabWrapper: {
+    flexDirection: 'row',
+    backgroundColor: '#F5F5F5',
+    borderRadius: 12,
+    padding: 4,
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: 'center',
+    borderRadius: 10,
+  },
+  activeTab: {
+    backgroundColor: '#5D4037', // Brown theme
+  },
+  tabText: {
+    fontWeight: '700',
+    fontSize: 14,
+  },
+  activeTabText: {
+    color: '#fff',
   },
 });
 
